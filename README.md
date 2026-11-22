@@ -20,6 +20,8 @@ tableau de bord et exports. Tutoriel pour les usager·es : [`tuto.html`](https:/
 3. Panneau de droite : **URL personnalisée**, collez l’adresse ci-dessus.
 4. Accès : **Lire la table sélectionnée** (c’est tout ce qu’il faut).
 5. Au premier lancement, vérifiez les colonnes reconnues, puis **Voir la carte**. Une visite guidée présente les boutons.
+6. Facultatif : ajoutez une vue **Fiche** de la même table avec **Sélectionner par → Carto-profs** ; le bouton
+   « voir la ligne dans Grist » de chaque personne y affichera sa ligne.
 
 Pour essayer : importez [`exemple/carto-profs-exemple.csv`](exemple/carto-profs-exemple.csv) dans Grist
 (**Nouveau → Importer depuis un fichier**), données entièrement inventées.

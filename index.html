@@ -1982,7 +1982,7 @@ function demarrerDemo() {
 }
 function initGrist() {
   if (!DANS_GRIST) return demarrerDemo();
-  grist.ready({ requiredAccess: 'read table', columns: COLONNES_GRIST, allowSelectBy: false });
+  grist.ready({ requiredAccess: 'read table', columns: COLONNES_GRIST, allowSelectBy: true });   // une vue Fiche peut suivre la carte
   grist.onOptions((o, interaction) => {
     if (interaction && interaction.accessLevel) acces = interaction.accessLevel;
     reglages = fusion(reglagesParDefaut(), o || {});
