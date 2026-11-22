@@ -193,6 +193,25 @@ textarea { resize: vertical; }
 .tab-col td:first-child { font-weight: 600; width: 34%; }
 .tab-col td:last-child { color: var(--doux); font-size: 12px; width: 30%; }
 .tab-col select { width: 100%; }
+.g-liste { display: flex; flex-direction: column; }
+.g-ligne { display: flex; gap: 10px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid var(--ligne); flex-wrap: wrap; }
+.g-ligne .pastille { margin-top: 3px; }
+.g-txt { flex: 1 1 220px; min-width: 0; }
+.g-actions { gap: 4px; }
+.g-form { display: flex; flex-direction: column; gap: 8px; }
+.nuance { width: 26px; height: 26px; border-radius: 50%; border: 2px solid var(--anneau); box-shadow: 0 0 0 1px var(--ligne); cursor: pointer; padding: 0; }
+.nuance[aria-pressed="true"] { box-shadow: 0 0 0 2px var(--texte); }
+#g-couleur { width: 30px; height: 30px; padding: 0; border: 0; background: none; cursor: pointer; }
+.g-etat { display: inline-flex; align-items: center; gap: 4px; font-size: 12px; font-weight: 600; white-space: nowrap; }
+.g-etat .ic { width: 14px; height: 14px; }
+.g-etat.sur { color: #047857; } .g-etat.doute { color: var(--alerte-texte); } .g-etat.introuvable { color: #b91c1c; }
+:root[data-theme="sombre"] .g-etat.sur { color: #6ee7b7; } :root[data-theme="sombre"] .g-etat.introuvable { color: #fca5a5; }
+tr.g-doute td { background: var(--alerte-fond); }
+table.g-res select { width: 100%; max-width: 380px; }
+table.liste.g-membres, table.liste.g-res { min-width: 560px; }
+.g-tags { display: inline-flex; flex-wrap: wrap; gap: 3px; margin-left: 4px; vertical-align: 1px; }
+.g-tag { display: inline-flex; align-items: center; gap: 3px; font-size: 10.5px; line-height: 16px; padding: 0 6px; border-radius: 999px; background: var(--survol); color: var(--doux); white-space: nowrap; }
+.g-tag i { width: 7px; height: 7px; border-radius: 50%; display: inline-block; }
 .astuce-acces { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; border-radius: 10px; background: var(--accent-clair); border: 1px solid var(--accent-bord); font-size: 12px; }
 .astuce-acces .ic { color: var(--accent-fonce); margin-top: 1px; }
 .sans-acces { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 9; width: 420px; max-width: calc(100% - 24px); background: var(--panneau); border: 1.5px solid var(--accent); border-radius: 14px; box-shadow: var(--ombre-forte); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
@@ -269,6 +288,7 @@ body.presentation .legende { top: 12px; }
     </div>
     <button class="btn" id="b-couleurs" title="Choisir la colonne qui donne la couleur des points"><i data-ic="palette"></i><span class="lib">Colorier : <b id="lib-couleur">—</b></span></button>
     <button class="btn" id="b-bulles" title="Choisir ce que montrent les bulles"><i data-ic="message"></i><span class="lib">Bulles</span></button>
+    <button class="btn" id="b-groupes" title="Groupes de personnes (formateur·trices, tuteur·trices…)"><i data-ic="users"></i><span class="lib">Groupes</span></button>
     <button class="btn" id="b-filtre" title="Ne montrer qu’une partie des personnes"><i data-ic="funnel"></i><span class="lib" id="lib-filtre">Filtrer</span></button>
     <button class="btn" id="b-depart" title="Point de départ : distances et cercles de rayon"><i data-ic="crosshair"></i><span class="lib" id="lib-depart">Départ</span></button>
     <button class="btn" id="b-selection" aria-pressed="false" title="Entourer des établissements sur la carte pour les ajouter à la sélection"><i data-ic="lasso"></i><span class="lib">Sélectionner</span></button>
@@ -316,8 +336,14 @@ body.presentation .legende { top: 12px; }
 // Carto-profs — carte des personnes d'une table Grist, placées par l'UAI de leur établissement (open data).
 // Un seul fichier, sans étape de construction. Icônes : Lucide (https://lucide.dev, licence ISC).
 // ============================================================================================================
-const VERSION = '1.1.0';
+const VERSION = '1.2.0';
 const NOUVEAUTES = [
+  { version: '1.2.0', date: 'novembre 2026', points: [
+    'Groupes : créer des groupes (nom, couleur, description) et les voir en couleur sur la carte, en camembert pour les personnes de plusieurs groupes.',
+    'Ajouter des membres depuis la fiche, depuis la sélection, ou en collant une liste de mails ou de noms (ou un CSV) : le widget retrouve les personnes et demande de valider les doutes.',
+    'Membres hors table (autre discipline, CPE…) placés grâce à leur UAI ; export CSV de chaque groupe.',
+    'Message clair quand le widget ne reçoit aucune ligne de la table.'
+  ] },
   { version: '1.1.0', date: 'novembre 2026', points: [
     'Les points restent à leur place quand on zoome, tourne ou incline la carte.',
     'Boussole en bas à droite : un clic remet le nord en haut et la carte à plat.',
@@ -400,6 +426,11 @@ const IC = {
   image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
   plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
   refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+  'user-plus': '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/>',
+  'file-up': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/>',
+  trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
+  check: '<path d="M20 6 9 17l-5-5"/>',
   sort: '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>'
 };
 const ic = (nom, style = '') => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"${style ? ` style="${style}"` : ''}>${IC[nom] || ''}</svg>`;
@@ -569,7 +600,7 @@ function bornes(info) {
 }
 function colonneCouleurActive() {
   const cc = reglages.couleur;
-  if (cc.source === 'aucune') return null;
+  if (cc.source === 'aucune' || cc.source === 'groupes') return null;
   if (cc.source === 'colonne') return col('Couleur');
   const c = cc.col && colonnesTable.includes(cc.col) ? cc.col : col('Groupe');
   return c || null;
@@ -578,7 +609,10 @@ function preparerCategories() {
   const cc = reglages.couleur, c = colonneCouleurActive();
   const cat = new Map(), ordre = [];
   infoCouleur = null;
-  if (cc.source === 'colonne' && c) {
+  if (cc.source === 'groupes') {
+    groupes.forEach(g => ordre.push(g.nom)); ordre.push(HORS_GROUPE);
+    for (const p of personnes) { const l = appartenances.get(p.id); cat.set(p.id, l && l.length ? [...l].sort((a, b) => ordre.indexOf(a) - ordre.indexOf(b)) : [HORS_GROUPE]); }
+  } else if (cc.source === 'colonne' && c) {
     for (const p of personnes) { const h = texte(p.rec[c]); cat.set(p.id, RE_HEX.test(h) ? h.toLowerCase() : 'Sans couleur'); }
   } else if (c) {
     infoCouleur = analyserColonne(c);
@@ -593,27 +627,31 @@ function preparerCategories() {
       }
     } else for (const p of personnes) cat.set(p.id, texte(p.rec[c]) || 'Sans valeur');
   } else for (const p of personnes) cat.set(p.id, 'Toutes les personnes');
-  for (const p of personnes) p.cat = cat.get(p.id);
+  // une personne peut avoir plusieurs catégories (groupes) : p.cats ; p.cat = la première
+  for (const p of personnes) { const v = cat.get(p.id); p.cats = Array.isArray(v) ? v : [v]; p.cat = p.cats[0]; }
   // comptes sur les personnes filtrées (avant masquage par la légende)
   const comptes = new Map();
-  for (const p of personnes) if (passeFiltre(p)) comptes.set(p.cat, (comptes.get(p.cat) || 0) + 1);
+  for (const p of personnes) if (passeFiltre(p)) for (const k of p.cats) comptes.set(k, (comptes.get(k) || 0) + 1);
   let cles = [...comptes.keys()];
-  if (ordre.length) cles.sort((a, b) => (ordre.indexOf(a) + 1 || 99) - (ordre.indexOf(b) + 1 || 99));
+  if (cc.source === 'groupes') cles = ordre.filter(k => k !== HORS_GROUPE || comptes.has(k));
+  else if (ordre.length) cles.sort((a, b) => (ordre.indexOf(a) + 1 || 99) - (ordre.indexOf(b) + 1 || 99));
   else cles.sort((a, b) => (a === 'Sans valeur' || a === 'Sans couleur') - (b === 'Sans valeur' || b === 'Sans couleur') || comptes.get(b) - comptes.get(a) || a.localeCompare(b, 'fr'));
   const pal = (PALETTES[cc.palette] || PALETTES.lisible).c;
   let i = 0;
   categories = cles.map(k => {
     let couleur;
-    if (k === 'Sans valeur' || k === 'Sans couleur') couleur = SANS;
+    if (k === 'Sans valeur' || k === 'Sans couleur' || k === HORS_GROUPE) couleur = SANS;
+    else if (cc.source === 'groupes') couleur = couleurGroupe(groupes.find(g => g.nom === k) || {});
     else if (cc.source === 'colonne') couleur = k;
     else if (cc.valeurs && cc.valeurs[k]) couleur = cc.valeurs[k];
     else if (ordre.length) couleur = DEGRADE[Math.max(0, ordre.indexOf(k))];
     else if (k === 'Toutes les personnes') couleur = '#2563eb';
     else couleur = pal[i++ % pal.length];
-    return { cle: k, lib: k, couleur, n: comptes.get(k) };
+    return { cle: k, lib: k, couleur, n: comptes.get(k) || 0 };
   });
 }
 const couleurCat = k => (categories.find(c => c.cle === k) || {}).couleur || SANS;
+const catVisible = p => p.cats.find(k => !masquees.has(k)) || p.cat;
 
 // ------------------------------------------------------------------------------------------------ données → établissements
 function passeFiltre(p) { return !filtre || filtre.garder.has(texte(p.rec[filtre.col]) || 'Sans valeur'); }
@@ -647,10 +685,12 @@ function recalculer() {
   const d = deviner(lignes, colonnesTable); devinees = d.res; raisons = d.pourquoi;
   const cU = col('UAI');
   personnes = lignes.map(r => ({ id: r.id, rec: r, uai: cU ? normUai(r[cU]) : '' }));
+  resoudreGroupes();
+  if (reglages.couleur.source === 'groupes') personnes.push(...libres);   // membres hors table : seulement en mode groupes
   if (filtre && !colonnesTable.includes(filtre.col)) filtre = null;
   preparerCategories();
   // regroupement par UAI (personnes filtrées et non masquées)
-  visibles = personnes.filter(p => p.uai && passeFiltre(p) && !masquees.has(p.cat));
+  visibles = personnes.filter(p => p.uai && passeFiltre(p) && p.cats.some(k => !masquees.has(k)));
   sansUai = personnes.filter(p => !p.uai);
   const groupes = new Map();
   for (const p of visibles) { if (!groupes.has(p.uai)) groupes.set(p.uai, []); groupes.get(p.uai).push(p); }
@@ -660,7 +700,7 @@ function recalculer() {
     if (triCol) ps.sort((a, b) => texte(a.rec[triCol]).localeCompare(texte(b.rec[triCol]), 'fr'));
     const xy = coordonnees(uai, ps.map(p => p.rec));
     const e = { uai, pers: ps, n: ps.length, ...infoEtab(uai, ps.map(p => p.rec)), lat: xy && xy.lat, lon: xy && xy.lon };
-    const cpt = new Map(); for (const p of ps) cpt.set(p.cat, (cpt.get(p.cat) || 0) + 1);
+    const cpt = new Map(); for (const p of ps) for (const k of p.cats) if (!masquees.has(k)) cpt.set(k, (cpt.get(k) || 0) + 1);
     e.parts = [...cpt.entries()].map(([cle, n]) => ({ cle, n, c: couleurCat(cle) })).sort((a, b) => b.n - a.n);
     if (depart && xy) e.dist = distanceKm(depart, e);
     if (xy) { etabs.push(e); parUai.set(uai, e); }
@@ -1042,21 +1082,22 @@ function apresSelection() {
 // ------------------------------------------------------------------------------------------------ légende, statut
 function majLibelles() {
   const c = colonneCouleurActive();
-  $('lib-couleur').textContent = reglages.couleur.source === 'colonne' ? 'colonne couleur' : (c || 'aucune');
+  $('lib-couleur').textContent = reglages.couleur.source === 'groupes' ? 'groupes' : reglages.couleur.source === 'colonne' ? 'colonne couleur' : (c || 'aucune');
+  $('b-groupes').classList.toggle('actif', reglages.couleur.source === 'groupes');
   $('lib-filtre').textContent = filtre ? `Filtre : ${filtre.col}` : 'Filtrer';
   $('b-filtre').classList.toggle('actif', !!filtre);
 }
 let legendeRepliee = innerWidth < 700;
 function rendreLegende() {
   const c = colonneCouleurActive(), f = reglages.fond;
-  const titre = reglages.couleur.source === 'colonne' ? 'Couleurs de la table' : (c || 'Personnes');
+  const titre = reglages.couleur.source === 'groupes' ? 'Groupes' : reglages.couleur.source === 'colonne' ? 'Couleurs de la table' : (c || 'Personnes');
   const items = categories.map(k => `<button class="leg-item${masquees.has(k.cle) ? ' masque' : ''}" data-cat="${esc(k.cle)}" aria-pressed="${!masquees.has(k.cle)}" title="${masquees.has(k.cle) ? 'Montrer' : 'Masquer'} « ${esc(k.lib)} »">
       <span class="pastille" style="background:${esc(k.couleur)}"></span><span>${esc(k.lib)}</span><span class="n">${k.n}</span></button>`).join('');
   const puces = TYPES_FOND.map(([k, l]) => `<button class="puce" data-type="${k}" aria-pressed="${f.types.includes(k)}">${l}</button>`).join('')
     + ['Public', 'Privé'].map(s => `<button class="puce" data-secteur="${s}" aria-pressed="${f.secteurs.includes(s)}">${s}</button>`).join('');
   $('legende').classList.toggle('replie', legendeRepliee);
   $('legende').innerHTML = `<div class="leg-tete"><b>${esc(titre)}</b>
-      ${reglages.couleur.source !== 'aucune' && c ? `<button class="fermer" id="leg-retirer" aria-label="Retirer les couleurs" title="Retirer les couleurs (tous les points pareils)">${ic('x')}</button>` : ''}
+      ${reglages.couleur.source !== 'aucune' && (c || reglages.couleur.source === 'groupes') ? `<button class="fermer" id="leg-retirer" aria-label="Retirer les couleurs" title="Retirer les couleurs (tous les points pareils)">${ic('x')}</button>` : ''}
       <button class="fermer" id="leg-replier" aria-expanded="${!legendeRepliee}" aria-label="${legendeRepliee ? 'Déplier' : 'Replier'} la légende">${ic(legendeRepliee ? 'down' : 'up')}</button></div>
     <div class="leg-corps">
       ${items || '<p class="aide-texte">Aucune personne à afficher.</p>'}
@@ -1073,6 +1114,7 @@ function rendreStatut(message) {
   const n = visibles.length;
   let h = `<span class="info">${pluriel(n, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtre || masquees.size ? ' (filtrés)' : ''}</span>`;
   if (geoEnCours || message) h += `<span class="info">${esc(message || 'Recherche des coordonnées des établissements…')}</span>`;
+  if (DANS_GRIST && recuLignes && !lignes.length) h += `<span class="info">${ic('alert')} Aucune ligne reçue : la table est vide, ou la vue n’est pas liée à une table (panneau de droite → Données), ou l’accès est « Aucun accès ».</span>`;
   const nbI = new Set(introuvables.map(e => e.uai)).size;
   if (nbI || sansUai.length) h += `<button class="btn petit alerte" id="b-introuvables">${ic('alert')}${nbI ? pluriel(nbI, 'UAI introuvable', 'UAI introuvables') : ''}${nbI && sansUai.length ? ' · ' : ''}${sansUai.length ? pluriel(sansUai.length, 'ligne sans UAI', 'lignes sans UAI') : ''}</button>`;
   if (erreurGeo && !geoEnCours) h += `<button class="btn petit alerte" id="b-reessayer">${ic('refresh')}Réessayer l’open data</button>`;
@@ -1086,6 +1128,7 @@ function rendreBarreSelection() {
   $('barre-selection').innerHTML = `<span><b>Sélection : ${pluriel(n, 'personne', 'personnes')}</b> <span class="doux">dans ${pluriel(us.size, 'établissement', 'établissements')}</span></span>
     <button class="btn primaire" id="sel-ecrire">${ic('mail')}Écrire…</button>
     <button class="btn" id="sel-copier">${ic('copy')}Copier les adresses</button>
+    ${groupesDispo() ? `<button class="btn" id="sel-groupe">${ic('user-plus')}Ajouter à un groupe…</button>` : ''}
     <button class="btn ico" id="sel-vider" aria-label="Vider la sélection" title="Vider la sélection">${ic('x')}</button>`;
 }
 
@@ -1117,8 +1160,8 @@ function modeleParDefaut() {
   return m;
 }
 const modele = () => reglages.bulles.modele || modeleParDefaut();
-const mailPersonne = p => { const c = col('Mail'); const m = c ? texte(p.rec[c]) : ''; return estMail(m) ? m : ''; };
-const nomPersonne = p => [col('Nom') && texte(p.rec[col('Nom')]), col('Prenom') && texte(p.rec[col('Prenom')])].filter(Boolean).join(' ') || rendreModele(modele(), p.rec, false) || `ligne ${p.id}`;
+const mailPersonne = p => { if (p.libre) return estMail(p.mail) ? p.mail : ''; const c = col('Mail'); const m = c ? texte(p.rec[c]) : ''; return estMail(m) ? m : ''; };
+const nomPersonne = p => p.libre ? `${p.nom} ${p.prenom}`.trim() : [col('Nom') && texte(p.rec[col('Nom')]), col('Prenom') && texte(p.rec[col('Prenom')])].filter(Boolean).join(' ') || rendreModele(modele(), p.rec, false) || `ligne ${p.id}`;
 function lienItineraire(e) {
   return depart ? `https://www.openstreetmap.org/directions?route=${depart.lat}%2C${depart.lon}%3B${e.lat}%2C${e.lon}`
     : `https://www.openstreetmap.org/directions?route=%3B${e.lat}%2C${e.lon}#map=14/${e.lat}/${e.lon}`;
@@ -1133,8 +1176,9 @@ function htmlFiche(e, apercu = false) {
     const m = mailPersonne(p);
     return `<li data-id="${p.id}" class="${p.id === ficheTrouve ? 'trouve' : ''}">
       ${apercu ? '' : `<input type="checkbox" data-sel="${p.id}" ${selection.has(p.id) ? 'checked' : ''} aria-label="Ajouter ${esc(nomPersonne(p))} à la sélection">`}
-      <span class="point" style="background:${esc(couleurCat(p.cat))}" title="${esc(p.cat)}"></span>
-      <span class="txt">${rendreModele(modele(), p.rec) || esc(nomPersonne(p))}</span>
+      <span class="point" style="background:${esc(couleurCat(catVisible(p)))}" title="${esc(p.cats.join(', '))}"></span>
+      <span class="txt">${rendreModele(modele(), p.rec) || esc(nomPersonne(p))}${tagsGroupes(p)}</span>
+      ${!apercu && groupesDispo() ? `<button class="mini" data-groupes-de="${p.id}" aria-label="Groupes de ${esc(nomPersonne(p))}" title="Ajouter à un groupe">${ic('user-plus')}</button>` : ''}
       ${b.mailParPersonne && m ? `<a class="mini" href="mailto:${esc(m)}" target="_blank" rel="noopener" aria-label="Écrire à ${esc(nomPersonne(p))}" title="Écrire à ${esc(m)}">${ic('mail')}</a>` : ''}
       ${b.lienGrist && !apercu ? `<button class="mini" data-grist="${p.id}" aria-label="Voir la ligne de ${esc(nomPersonne(p))} dans Grist" title="Voir la ligne dans Grist">${ic('pen')}</button>` : ''}
     </li>`;
@@ -1154,6 +1198,11 @@ function htmlFiche(e, apercu = false) {
     </div>
     <ul class="pers">${lignesP}</ul>`;
 }
+function tagsGroupes(p) {
+  const l = appartenances.get(p.id) || [];
+  if (!l.length && !p.libre) return '';
+  return `<span class="g-tags">${p.libre ? '<span class="g-tag">hors table</span>' : ''}${l.map(n => { const g = groupes.find(x => x.nom === n); return `<span class="g-tag"><i style="background:${esc(g ? couleurGroupe(g) : SANS)}"></i>${esc(n)}</span>`; }).join('')}</span>`;
+}
 function ouvrirFiche(uai, idTrouve = null) {
   const e = parUai.get(uai); if (!e) return;
   ficheUai = uai; ficheTrouve = idTrouve;
@@ -1169,6 +1218,7 @@ function rendreFiche() {
 }
 function fermerFiche() { ficheUai = null; ficheTrouve = null; $('fiche').hidden = true; document.body.classList.remove('fiche-ouverte'); viderMarqueurs(); planifierMarqueurs(); }
 function voirDansGrist(id) {
+  if (id < 0) return toast(`Membre hors table : il se modifie dans la table ${T_MEMBRES}.`);
   if (!DANS_GRIST) return toast('Dans Grist, ce bouton sélectionne la ligne de la personne dans la table.');
   try { grist.setCursorPos({ rowId: id }); } catch (e) { toast('Impossible de sélectionner la ligne dans Grist.'); }
 }
@@ -1209,6 +1259,7 @@ function ouvrirPop(bouton, html, largeur = 320) {
   const r = bouton.getBoundingClientRect();
   const l = Math.max(8, Math.min(r.left, innerWidth - Math.min(largeur, innerWidth - 24) - 8));
   p.style.left = l + 'px'; p.style.top = (r.bottom + 6) + 'px';
+  if (r.bottom + 6 + p.offsetHeight > innerHeight - 8) p.style.top = Math.max(8, r.top - p.offsetHeight - 6) + 'px';
   popPour = bouton;
   const premier = p.querySelector('input, select, button'); if (premier) premier.focus();
 }
@@ -1255,7 +1306,9 @@ function rendreCouleurs() {
           ${b.source !== 'aucune' ? `<button class="btn petit" id="cc-retirer">${ic('x')}Retirer les couleurs</button>` : ''}</div>` : ''}
         ${actuel ? choix(actuel.col, actuel.col, apercu(actuel), 'choix actuel', true) : ''}
         ${b.source === 'colonne' && cCoul ? choix('__colonne', `Couleur lue dans la colonne ${cCoul}`, 'chaque ligne donne sa couleur au format #rrggbb', 'choix actuel', true) : ''}
+        ${b.source === 'groupes' ? choix('__groupes', 'Groupes', `${pluriel(groupes.length, 'groupe', 'groupes')} : ${groupes.slice(0, 4).map(g => g.nom).join(', ')}${groupes.length > 4 ? '…' : ''}`, 'choix actuel', true) : ''}
         ${choix('__aucune', 'Une seule couleur', 'pas de catégories : tous les points pareils', b.source === 'aucune' ? 'choix actuel' : '', b.source === 'aucune')}
+        ${groupes.length && b.source !== 'groupes' ? choix('__groupes', 'Groupes', `${pluriel(groupes.length, 'groupe', 'groupes')} : ${groupes.slice(0, 4).map(g => g.nom).join(', ')}${groupes.length > 4 ? '…' : ''}`, 'vos groupes', false) : ''}
         <div style="font-weight:600;margin-top:6px">${actuel || b.source !== 'categorie' ? 'Ou une autre colonne' : 'Colonnes qui font de bonnes catégories'}</div>
         ${bons.map(i => choix(i.col, i.col, apercu(i), i.genre, false)).join('') || '<p class="aide-texte">Aucune autre colonne ne ressemble à une catégorie (trop de valeurs différentes).</p>'}
         ${cCoul && b.source !== 'colonne' ? choix('__colonne', `Couleur lue dans la colonne ${cCoul}`, 'chaque ligne donne sa couleur au format #rrggbb', '', false) : ''}
@@ -1269,18 +1322,20 @@ function rendreCouleurs() {
   // étape 2
   const c = b.source === 'categorie' ? b.col : null;
   const info = c ? analyserColonne(c) : null;
+  const sousTitre = b.source === 'groupes' ? 'couleurs des groupes' : null;
   let vals = [];
   if (info && info.type === 'texte') vals = info.valeurs.map(([v, n]) => [v || 'Sans valeur', n]);
   const pal = (PALETTES[b.palette] || PALETTES.lisible).c;
   let i = 0;
   const couleurDe = v => v === 'Sans valeur' ? SANS : (b.valeurs[v] || pal[i++ % pal.length]);
-  ouvrirModale(`${teteModale('palette', 'Colorier selon…', `Étape 2 sur 2 · ${b.source === 'colonne' ? 'couleurs lues dans la table' : b.source === 'aucune' ? 'une seule couleur' : `couleurs de « ${esc(c)} »`}`)}
+  ouvrirModale(`${teteModale('palette', 'Colorier selon…', `Étape 2 sur 2 · ${sousTitre ? sousTitre : b.source === 'colonne' ? 'couleurs lues dans la table' : b.source === 'aucune' ? 'une seule couleur' : `couleurs de « ${esc(c)} »`}`)}
     ${info && info.type === 'texte' ? `<div class="rangee"><span style="font-weight:600">Palette</span>
         ${Object.entries(PALETTES).map(([k, p]) => `<button class="puce" data-palette="${k}" aria-pressed="${b.palette === k}">${p.nom}</button>`).join('')}
         <button class="lien-btn" id="cc-raz">Couleurs par défaut</button></div>
       <p class="aide-texte">Cliquer une pastille pour changer sa couleur.</p>
       <div class="grille2">${vals.map(([v, n]) => `<label class="val-couleur"><input type="color" data-val="${esc(v)}" value="${esc(couleurDe(v))}" aria-label="Couleur de ${esc(v)}"><span>${esc(v)}</span><span class="n" style="flex:none;color:var(--doux)">${n}</span></label>`).join('')}</div>` : ''}
     ${info && info.type === 'nombre' ? `<p>Dégradé en ${DEGRADE.length} classes :</p><div class="grille2">${bornes(info).map((x, k) => `<div class="val-couleur"><span class="pastille" style="background:${DEGRADE[k]}"></span><span>${esc(x.lib)}</span></div>`).join('')}</div>` : ''}
+    ${b.source === 'groupes' ? `<p>Chaque membre prend la couleur de son groupe ; les autres personnes sont en gris (« Hors groupe » dans la légende, cliquer pour les cacher). Couleurs et membres : bouton ${ic('users')} Groupes.</p>` : ''}
     ${b.source === 'colonne' ? `<p>Chaque personne prend la couleur écrite dans sa ligne (format <code>#rrggbb</code>, par exemple <code>#2563eb</code>). Les autres valeurs sont en gris.</p>` : ''}
     ${b.source !== 'aucune' ? `<div style="display:flex;flex-direction:column;gap:6px"><div style="font-weight:600">Établissement avec plusieurs couleurs</div>
       <label class="case"><input type="radio" name="cc-mode" value="camembert" ${b.mode !== 'majoritaire' ? 'checked' : ''}><span class="pastille" style="background:conic-gradient(#2563eb 0 60%, #ea580c 60% 100%)"></span>Camembert (part de chaque couleur)</label>
@@ -1295,6 +1350,7 @@ function lireChoixCouleur() {
   const r = $('modale').querySelector('input[name="cc-col"]:checked'); if (!r) return false;
   const b = brouillonCouleur;
   if (r.value === '__colonne') b.source = 'colonne';
+  else if (r.value === '__groupes') b.source = 'groupes';
   else if (r.value === '__aucune') b.source = 'aucune';
   else { if (b.col !== r.value) b.valeurs = {}; b.source = 'categorie'; b.col = r.value; }
   return true;
@@ -1426,6 +1482,380 @@ async function ecrireCoordonnees() {
   } catch (e) { toast(`Écriture impossible : ${e.message || e}`); }
 }
 
+// ------------------------------------------------------------------------------------------------ groupes
+// Deux tables du document : Carto_groupes (Nom, Couleur, Description) et Carto_membres (Groupe → Carto_groupes, Nom,
+// Prenom, Mail, UAI, Source). Les membres se retrouvent dans la table des personnes par mail, puis nom + prénom + UAI,
+// puis nom + prénom (si un seul résultat) : ils survivent au remplacement de la table d’une année sur l’autre.
+// Un membre absent de la table mais avec un UAI est placé quand même (« hors table »).
+const T_GROUPES = 'Carto_groupes', T_MEMBRES = 'Carto_membres', HORS_GROUPE = 'Hors groupe';
+let groupes = [], membres = [], tablesGroupes = null, appartenances = new Map(), lignesMembre = new Map(), libres = [], nonPlaces = new Map();
+const memoire = { [T_GROUPES]: [], [T_MEMBRES]: [], n: 0 };          // démonstration hors Grist
+const groupesDispo = () => tablesGroupes === true && (!DANS_GRIST || acces === 'full');
+const cleNom = s => sansAccents(s).replace(/[^a-z]+/g, ' ').trim();
+const couleurGroupe = g => g.couleur || PALETTES.lisible.c[Math.max(0, groupes.indexOf(g)) % PALETTES.lisible.c.length];
+const nomDe = p => p.libre ? p.nom : texte(p.rec[col('Nom')]);
+const prenomDe = p => p.libre ? p.prenom : texte(p.rec[col('Prenom')]);
+const clePersonne = p => cleNom(`${nomDe(p)} ${prenomDe(p)}`);
+function enLignes(t) {
+  const ids = (t && t.id) || [];
+  return ids.map((id, i) => { const o = { id }; for (const k in t) if (k !== 'id') o[k] = t[k][i]; return o; });
+}
+function appliquerMemoire(actions) {
+  const ret = [];
+  for (const [type, table, ...a] of actions) {
+    if (type === 'AddTable') { memoire[table] = memoire[table] || []; ret.push(null); continue; }
+    const t = memoire[table];
+    if (type === 'AddRecord') { const id = ++memoire.n; t.push({ id, ...a[1] }); ret.push(id); }
+    if (type === 'BulkAddRecord') { const ids = a[0].map(() => ++memoire.n); ids.forEach((id, i) => { const r = { id }; for (const k in a[1]) r[k] = a[1][k][i]; t.push(r); }); ret.push(ids); }
+    if (type === 'UpdateRecord') { Object.assign(t.find(r => r.id === a[0]) || {}, a[1]); ret.push(null); }
+    if (type === 'RemoveRecord' || type === 'BulkRemoveRecord') { const ids = new Set(type === 'RemoveRecord' ? [a[0]] : a[0]); memoire[table] = t.filter(r => !ids.has(r.id)); ret.push(null); }
+  }
+  return ret;
+}
+async function actionsGroupes(actions) {
+  if (!DANS_GRIST) return appliquerMemoire(actions);
+  const r = await grist.docApi.applyUserActions(actions);
+  return (r && r.retValues) || [];
+}
+async function chargerGroupes() {
+  let g, m;
+  try {
+    if (!DANS_GRIST) { tablesGroupes = true; g = memoire[T_GROUPES]; m = memoire[T_MEMBRES]; }
+    else {
+      if (acces !== 'full') { tablesGroupes = null; groupes = []; membres = []; return; }
+      const tables = await grist.docApi.listTables();
+      if (!tables.includes(T_GROUPES) || !tables.includes(T_MEMBRES)) { tablesGroupes = false; groupes = []; membres = []; return; }
+      const [tg, tm] = await Promise.all([grist.docApi.fetchTable(T_GROUPES), grist.docApi.fetchTable(T_MEMBRES)]);
+      g = enLignes(tg); m = enLignes(tm); tablesGroupes = true;
+    }
+  } catch (e) { tablesGroupes = null; groupes = []; membres = []; toast(`Groupes illisibles : ${e.message || e}`); return; }
+  groupes = g.map(r => ({ id: r.id, nom: texte(r.Nom) || `Groupe ${r.id}`, couleur: RE_HEX.test(texte(r.Couleur)) ? texte(r.Couleur).toLowerCase() : '', description: texte(r.Description) }))
+    .sort((a, b) => a.nom.localeCompare(b.nom, 'fr'));
+  membres = m.map(r => ({ id: r.id, groupe: typeof r.Groupe === 'number' ? r.Groupe : +r.Groupe, nom: texte(r.Nom), prenom: texte(r.Prenom), mail: texte(r.Mail).toLowerCase(), uai: normUai(r.UAI), source: texte(r.Source) }));
+}
+async function rafraichirGroupes() {
+  await chargerGroupes();
+  recalculer();
+  if (!$('modale-fond').hidden && vg) rendreGroupes();
+}
+function pseudoPersonne(m) {
+  const rec = { id: -m.id };
+  rec[col('Nom') || 'Nom'] = m.nom; rec[col('Prenom') || 'Prenom'] = m.prenom; rec[col('Mail') || 'Mail'] = m.mail; rec[col('UAI') || 'UAI'] = m.uai;
+  return { id: -m.id, rec, uai: m.uai, libre: true, nom: m.nom, prenom: m.prenom, mail: m.mail };
+}
+function resoudreGroupes() {
+  appartenances = new Map(); lignesMembre = new Map(); libres = []; nonPlaces = new Map();
+  if (!groupes.length) return;
+  const parMail = new Map(), parNomUai = new Map(), parNom = new Map();
+  for (const p of personnes) {
+    const m = mailPersonne(p).toLowerCase(); if (m && !parMail.has(m)) parMail.set(m, p);
+    const k = clePersonne(p); if (!k) continue;
+    parNomUai.set(k + '|' + p.uai, p);
+    if (!parNom.has(k)) parNom.set(k, []); parNom.get(k).push(p);
+  }
+  const nomG = new Map(groupes.map(g => [g.id, g.nom])), libresPar = new Map();
+  for (const m of membres) {
+    const g = nomG.get(m.groupe); if (!g) continue;
+    const k = cleNom(`${m.nom} ${m.prenom}`);
+    let p = (m.mail && parMail.get(m.mail)) || (k && parNomUai.get(k + '|' + m.uai)) || null;
+    if (!p && k) { const l = parNom.get(k); if (l && l.length === 1) p = l[0]; }
+    if (!p && RE_UAI.test(m.uai)) {
+      const cle = m.mail || `${k}|${m.uai}`;
+      p = libresPar.get(cle);
+      if (!p) { p = pseudoPersonne(m); libresPar.set(cle, p); libres.push(p); }
+    }
+    if (!p) { nonPlaces.set(m.groupe, (nonPlaces.get(m.groupe) || 0) + 1); continue; }
+    if (!appartenances.has(p.id)) appartenances.set(p.id, []);
+    if (!appartenances.get(p.id).includes(g)) appartenances.get(p.id).push(g);
+    if (!lignesMembre.has(p.id)) lignesMembre.set(p.id, []);
+    lignesMembre.get(p.id).push(m);
+  }
+}
+const membreDe = (p, gid) => (lignesMembre.get(p.id) || []).filter(m => m.groupe === gid);
+function ligneMembre(p, source) {
+  return { Nom: nomDe(p), Prenom: prenomDe(p), Mail: mailPersonne(p), UAI: p.uai, Source: source || (p.libre ? 'hors table' : 'table') };
+}
+async function ajouterMembres(gid, items) {
+  const deja = membres.filter(m => m.groupe === gid);
+  const existe = x => deja.some(m => (x.Mail && m.mail === x.Mail.toLowerCase()) || (cleNom(`${m.nom} ${m.prenom}`) === cleNom(`${x.Nom} ${x.Prenom}`) && m.uai === normUai(x.UAI)));
+  const vus = new Set(), nouveaux = [];
+  for (const x of items) {
+    const cle = (x.Mail || '').toLowerCase() || `${cleNom(`${x.Nom} ${x.Prenom}`)}|${normUai(x.UAI)}`;
+    if (vus.has(cle) || existe(x)) continue;
+    vus.add(cle); nouveaux.push(x);
+  }
+  if (nouveaux.length) {
+    const cols = ['Nom', 'Prenom', 'Mail', 'UAI', 'Source'];
+    const val = { Groupe: nouveaux.map(() => gid) };
+    for (const c of cols) val[c] = nouveaux.map(x => x[c] || '');
+    try { await actionsGroupes([['BulkAddRecord', T_MEMBRES, nouveaux.map(() => null), val]]); }
+    catch (e) { toast(`Ajout impossible : ${e.message || e}`); return { ajoutes: 0, deja: items.length - nouveaux.length }; }
+    await rafraichirGroupes();
+  }
+  return { ajoutes: nouveaux.length, deja: items.length - nouveaux.length };
+}
+async function retirerMembres(ids) {
+  if (!ids.length) return;
+  try { await actionsGroupes([['BulkRemoveRecord', T_MEMBRES, ids]]); } catch (e) { return toast(`Retrait impossible : ${e.message || e}`); }
+  await rafraichirGroupes();
+}
+async function creerTablesGroupes() {
+  try {
+    await actionsGroupes([
+      ['AddTable', T_GROUPES, [{ id: 'Nom', type: 'Text' }, { id: 'Couleur', type: 'Text' }, { id: 'Description', type: 'Text' }]],
+      ['AddTable', T_MEMBRES, [{ id: 'Groupe', type: 'Ref:' + T_GROUPES }, { id: 'Nom', type: 'Text' }, { id: 'Prenom', type: 'Text' }, { id: 'Mail', type: 'Text' }, { id: 'UAI', type: 'Text' }, { id: 'Source', type: 'Text' }]]
+    ]);
+    toast(`Tables ${T_GROUPES} et ${T_MEMBRES} créées dans le document.`);
+  } catch (e) { toast(`Création impossible : ${e.message || e}`); }
+  await rafraichirGroupes();
+}
+
+// --- rapprochement d’une liste collée ou d’un CSV
+function decouper(ligne, sep) {
+  if (!sep) return [ligne];
+  const out = []; let cur = '', q = false;
+  for (let i = 0; i < ligne.length; i++) {
+    const c = ligne[i];
+    if (q) { if (c === '"' && ligne[i + 1] === '"') { cur += '"'; i++; } else if (c === '"') q = false; else cur += c; }
+    else if (c === '"') q = true; else if (c === sep) { out.push(cur.trim()); cur = ''; } else cur += c;
+  }
+  out.push(cur.trim());
+  return out;
+}
+const RE_MAIL_G = /[^\s<>;,"'()]+@[^\s<>;,"'()]+\.[a-z]{2,}/gi;
+function analyserListe(txt) {
+  const lignesT = String(txt || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean);
+  if (!lignesT.length) return [];
+  // une seule ligne pleine de mails (copiée d’un « À : ») → une entrée par mail
+  if (lignesT.length <= 3 && lignesT.join(' ').match(RE_MAIL_G) && lignesT.join(' ').match(RE_MAIL_G).length > lignesT.length) {
+    return lignesT.join(' ').match(RE_MAIL_G).map(m => ({ brut: m, mail: m.toLowerCase(), nom: '', prenom: '', complet: '', uai: '' }));
+  }
+  const seps = ['\t', ';', ','].map(s => [s, lignesT.filter(l => l.includes(s)).length]).sort((a, b) => b[1] - a[1]);
+  const sep = seps[0][1] >= Math.ceil(lignesT.length / 2) ? seps[0][0] : '';
+  const rangs = lignesT.map(l => decouper(l, sep));
+  const tete = rangs[0].map(c => cleNom(c));
+  const idx = re => tete.findIndex(c => re.test(c));
+  const aTete = !rangs[0].some(c => c.includes('@')) && tete.some(c => /^(nom|prenom|mail|e mail|courriel|adresse mail|uai|rne|nom prenom|nom complet|mail ouvert)$/.test(c));
+  const iNom = aTete ? idx(/^nom( d usage| de famille)?$/) : -1, iPre = aTete ? idx(/^prenom/) : -1;
+  const iMail = aTete ? idx(/mail|courriel/) : -1, iUai = aTete ? idx(/^(uai|rne|code uai|numero uai)$/) : -1;
+  const iComplet = aTete ? idx(/^(nom prenom|nom complet|prenom nom|identite)$/) : -1;
+  return (aTete ? rangs.slice(1) : rangs).map(r => {
+    const brut = r.filter(Boolean).join(' · ');
+    const mailC = iMail >= 0 ? r[iMail] : r.find(c => /@/.test(c)) || '';
+    const mail = ((mailC || '').match(RE_MAIL_G) || [''])[0].toLowerCase();
+    const RE_UAI_TXT = /\b\d{7}[A-Za-z]\b/;
+    const uai = normUai(iUai >= 0 ? r[iUai] : (r.find(c => RE_UAI.test(normUai(c))) || (r.join(' ').match(RE_UAI_TXT) || [''])[0]));
+    let nom = iNom >= 0 ? r[iNom] || '' : '', prenom = iPre >= 0 ? r[iPre] || '' : '';
+    let complet = iComplet >= 0 ? r[iComplet] || '' : '';
+    if (!aTete) complet = r.filter(c => c && !/@/.test(c) && !RE_UAI.test(normUai(c))).join(' ').replace(RE_MAIL_G, '').replace(/\b\d{7}[A-Za-z]\b/g, '').replace(/[<>"';,|]/g, ' ').replace(/\s+/g, ' ').trim();
+    return { brut, mail: estMail(mail) ? mail : '', nom: nom.trim(), prenom: prenom.trim(), complet: complet.trim(), uai: RE_UAI.test(uai) ? uai : '' };
+  }).filter(e => e.mail || e.nom || e.complet);
+}
+// « DUVAL Claire » ou « Claire DUVAL » : le nom est le mot en majuscules ; sinon « Prénom Nom »
+function couperNom(t) {
+  const mots = String(t || '').split(/\s+/).filter(Boolean);
+  const maj = w => /[A-ZÀ-Ý]{2,}/.test(w) && w === w.toUpperCase();
+  const n = mots.filter(maj);
+  if (n.length && n.length < mots.length) return { nom: n.join(' '), prenom: mots.filter(w => !maj(w)).join(' ') };
+  return { nom: mots.slice(-1).join(' '), prenom: mots.slice(0, -1).join(' ') };
+}
+function levenshtein(a, b) {
+  if (Math.abs(a.length - b.length) > 3) return 99;
+  let prec = Array.from({ length: b.length + 1 }, (_, j) => j);
+  for (let i = 1; i <= a.length; i++) {
+    const cur = [i];
+    for (let j = 1; j <= b.length; j++) cur[j] = Math.min(prec[j] + 1, cur[j - 1] + 1, prec[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1));
+    prec = cur;
+  }
+  return prec[b.length];
+}
+function indexPersonnes() {
+  const parMail = new Map(), parNom = new Map(), parNomSeul = new Map(), cles = [];
+  for (const p of personnes) {
+    if (p.libre) continue;
+    const m = mailPersonne(p).toLowerCase(); if (m) parMail.set(m, p);
+    const n = cleNom(nomDe(p)), pr = cleNom(prenomDe(p)); if (!n) continue;
+    for (const k of [`${n} ${pr}`.trim(), `${pr} ${n}`.trim()]) { if (!parNom.has(k)) parNom.set(k, []); if (!parNom.get(k).includes(p)) parNom.get(k).push(p); }
+    if (!parNomSeul.has(n)) parNomSeul.set(n, []); parNomSeul.get(n).push(p);
+    cles.push([`${n} ${pr}`.trim(), `${pr} ${n}`.trim(), p]);
+  }
+  return { parMail, parNom, parNomSeul, cles };
+}
+function rapprocher(e, ix) {
+  if (e.mail && ix.parMail.has(e.mail)) return { etat: 'sur', choix: [ix.parMail.get(e.mail)], raison: 'même mail' };
+  const k = cleNom(e.nom || e.prenom ? `${e.nom} ${e.prenom}` : e.complet);
+  if (!k) return { etat: 'introuvable', choix: [], raison: e.mail ? 'mail inconnu de la table' : '' };
+  let c = ix.parNom.get(k) || [];
+  if (c.length > 1 && e.uai) { const cu = c.filter(p => p.uai === e.uai); if (cu.length) c = cu; }
+  if (c.length === 1) return e.mail ? { etat: 'doute', choix: c, raison: 'même nom, mail différent' } : { etat: 'sur', choix: c, raison: 'même nom et prénom' };
+  if (c.length > 1) return { etat: 'doute', choix: c, raison: 'homonymes' };
+  if (!k.includes(' ')) { const s = ix.parNomSeul.get(k) || []; if (s.length) return { etat: 'doute', choix: s.slice(0, 6), raison: 'nom seul' }; }
+  const seuil = Math.max(1, Math.min(3, Math.floor(k.length / 6)));
+  const proches = ix.cles.map(([a, b, p]) => [Math.min(levenshtein(k, a), levenshtein(k, b)), p]).filter(x => x[0] <= seuil).sort((x, y) => x[0] - y[0]).slice(0, 4).map(x => x[1]);
+  if (proches.length) return { etat: 'doute', choix: proches, raison: 'nom approché' };
+  return { etat: 'introuvable', choix: [], raison: 'aucune personne proche' };
+}
+
+// --- fenêtre « Groupes »
+let vg = null;          // { vue: 'liste' | 'editer' | 'membres' | 'import' | 'resultats', id, confirmer }
+let importEtat = null;  // { gid, texte, entrees: [{ ..., res, choix }] }
+function ouvrirGroupes(vue = 'liste', id = null) {
+  vg = { vue, id, confirmer: null };
+  rendreGroupes();
+  if (DANS_GRIST && acces === 'full') chargerGroupes().then(() => { recalculer(); if (vg && !$('modale-fond').hidden) rendreGroupes(); });
+}
+const nbSurCarte = g => [...appartenances.values()].filter(l => l.includes(g.nom)).length;
+function htmlFormGroupe(g) {
+  const pris = new Set(groupes.filter(x => x !== g).map(couleurGroupe));
+  const libre = PALETTES.lisible.c.find(c => !pris.has(c)) || PALETTES.lisible.c[0];
+  const c = (g && couleurGroupe(g)) || libre;
+  return `<div class="g-form">
+    <label class="champ"><span>Nom du groupe</span><input type="text" id="g-nom" value="${esc(g ? g.nom : '')}" placeholder="Formateur·trices, tuteur·trices, groupe IREM…" maxlength="80"></label>
+    <div class="champ"><span>Couleur</span><div class="rangee">${PALETTES.lisible.c.slice(0, 10).map(x => `<button type="button" class="nuance" data-nuance="${x}" style="background:${x}" aria-label="Couleur ${x}" aria-pressed="${x === c}"></button>`).join('')}
+      <input type="color" id="g-couleur" value="${esc(c)}" aria-label="Autre couleur"></div></div>
+    <label class="champ"><span>Description <span style="font-weight:400;color:var(--doux)">(facultatif)</span></span><textarea id="g-desc" rows="2">${esc(g ? g.description : '')}</textarea></label>
+    <div class="rangee fin">${g ? '<button class="btn" data-g-vue="liste">Annuler</button>' : ''}<button class="btn primaire" id="g-enregistrer" data-id="${g ? g.id : ''}">${g ? 'Enregistrer' : `${ic('plus')}Créer le groupe`}</button></div></div>`;
+}
+function rendreGroupes() {
+  const t = teteModale('users', 'Groupes', 'Formateur·trices, tuteur·trices… : des listes de personnes à voir ensemble sur la carte');
+  if (DANS_GRIST && acces !== 'full') return ouvrirModale(`${t}<div class="astuce-acces">${ic('help')}<span>Les groupes sont enregistrés dans deux tables du document (<code>${T_GROUPES}</code> et <code>${T_MEMBRES}</code>) : il faut donner au widget l’<b>accès complet au document</b> (panneau de droite de Grist, rubrique Accès). Accès actuel : « ${esc(LIB_ACCES[acces] || 'inconnu')} ».</span></div>
+    <div class="rangee fin"><button class="btn primaire" data-fermer>Fermer</button></div>`, true);
+  if (tablesGroupes === false) return ouvrirModale(`${t}<p>Pour garder les groupes, le widget va créer deux tables dans ce document :</p>
+    <ul><li><code>${T_GROUPES}</code> : nom, couleur et description de chaque groupe ;</li><li><code>${T_MEMBRES}</code> : les membres (groupe, nom, prénom, mail, UAI).</li></ul>
+    <p class="aide-texte">Elles restent visibles et modifiables dans Grist. Les membres sont retrouvés dans la table des personnes par leur mail ou leur nom : ils suivent même si la table est remplacée l’an prochain.</p>
+    <div class="rangee fin"><button class="btn" data-fermer>Annuler</button><button class="btn primaire" id="g-creer-tables">${ic('plus')}Créer les tables</button></div>`, true);
+  if (tablesGroupes !== true) return ouvrirModale(`${t}<p class="aide-texte">Lecture des groupes…</p>`, true);
+  const g = groupes.find(x => x.id === vg.id);
+  let corps = '';
+  if (vg.vue === 'editer' && g) corps = `<h3>Modifier « ${esc(g.nom)} »</h3>${htmlFormGroupe(g)}`;
+  else if (vg.vue === 'membres' && g) corps = htmlMembres(g);
+  else if (vg.vue === 'import' && g) corps = htmlImport(g);
+  else if (vg.vue === 'resultats' && g) corps = htmlResultats(g);
+  else {
+    const mode = reglages.couleur.source === 'groupes';
+    corps = `${groupes.length ? `<div class="g-liste">${groupes.map(x => {
+      const n = membres.filter(m => m.groupe === x.id).length, np = nonPlaces.get(x.id) || 0, conf = vg.confirmer === x.id;
+      return `<div class="g-ligne"><span class="pastille" style="background:${esc(couleurGroupe(x))}"></span>
+        <div class="g-txt"><b>${esc(x.nom)}</b> <span class="aide-texte">${pluriel(n, 'membre', 'membres')}${np ? ` · ${np} sans place sur la carte` : ''}</span>${x.description ? `<div class="aide-texte">${esc(x.description)}</div>` : ''}</div>
+        <div class="rangee g-actions">
+          <button class="btn petit" data-g-import="${x.id}">${ic('user-plus')}Ajouter des membres</button>
+          <button class="btn petit" data-g-membres="${x.id}">${ic('list')}Membres</button>
+          <button class="btn petit ico" data-g-editer="${x.id}" aria-label="Modifier ${esc(x.nom)}" title="Modifier">${ic('pen')}</button>
+          <button class="btn petit ico" data-g-csv="${x.id}" aria-label="CSV des membres de ${esc(x.nom)}" title="CSV des membres">${ic('file-down')}</button>
+          <button class="btn petit ${conf ? 'alerte' : 'ico'}" data-g-suppr="${x.id}" aria-label="Supprimer ${esc(x.nom)}" title="Supprimer">${ic('trash')}${conf ? `Confirmer : supprimer avec ${pluriel(n, 'membre', 'membres')}` : ''}</button>
+        </div></div>`;
+    }).join('')}</div>
+    <div class="rangee"><span class="aide-texte" style="flex:1">${mode ? 'La carte montre les groupes. Légende : cliquer « Hors groupe » pour cacher les autres personnes.' : 'La carte est coloriée autrement pour l’instant.'}</span>
+      ${mode ? '<button class="btn" id="g-quitter-mode">Revenir aux couleurs d’avant</button>' : `<button class="btn primaire" id="g-voir">${ic('palette')}Voir les groupes sur la carte</button>`}</div><hr class="sep">`
+      : '<p class="aide-texte">Aucun groupe pour l’instant. Créez le premier :</p>'}
+    <h3>Nouveau groupe</h3>${htmlFormGroupe(null)}`;
+  }
+  ouvrirModale(`${t}${corps}`, true);
+}
+function htmlMembres(g) {
+  const ms = membres.filter(m => m.groupe === g.id).sort((a, b) => cleNom(a.nom).localeCompare(cleNom(b.nom)));
+  const ou = m => {
+    for (const [pid, l] of lignesMembre) if (l.includes(m)) { const p = personnes.find(x => x.id === pid) || libres.find(x => x.id === pid); const e = p && parUai.get(p.uai); return p && p.libre ? `hors table${e ? ' · ' + esc(e.nom) : ''}` : e ? esc(e.nom) : 'dans la table'; }
+    return '<span style="color:var(--alerte-texte)">pas sur la carte (absent de la table, sans UAI)</span>';
+  };
+  return `<div class="rangee"><button class="btn petit" data-g-vue="liste">${ic('back')}Groupes</button><h3 style="flex:1">${esc(g.nom)} · ${pluriel(ms.length, 'membre', 'membres')}</h3>
+      <button class="btn petit primaire" data-g-import="${g.id}">${ic('user-plus')}Ajouter des membres</button></div>
+    ${ms.length ? `<div class="boite-tab"><table class="liste g-membres"><thead><tr><th>Nom</th><th>Mail</th><th>UAI</th><th>Sur la carte</th><th></th></tr></thead><tbody>
+      ${ms.map(m => `<tr><td><b>${esc(m.nom)}</b> ${esc(m.prenom)}</td><td>${esc(m.mail)}</td><td>${esc(m.uai)}</td><td class="aide-texte">${ou(m)}</td>
+        <td><button class="mini" data-m-suppr="${m.id}" aria-label="Retirer ${esc(m.nom)} ${esc(m.prenom)} du groupe" title="Retirer du groupe">${ic('x')}</button></td></tr>`).join('')}</tbody></table></div>`
+      : '<p class="aide-texte">Aucun membre. Ajoutez-en depuis une liste, ou depuis la fiche d’un établissement (bouton à côté de chaque personne), ou depuis la sélection.</p>'}`;
+}
+function htmlImport(g) {
+  return `<div class="rangee"><button class="btn petit" data-g-vue="liste">${ic('back')}Groupes</button><h3 style="flex:1">Ajouter des membres à « ${esc(g.nom)} »</h3></div>
+    <p style="margin:0">Collez une liste — <b>des mails</b>, ou <b>des noms et prénoms</b> (une personne par ligne), ou un tableau copié d’un tableur avec une ligne de titres (Nom, Prénom, Mail, UAI) — ou déposez un fichier CSV. Le widget cherche chaque personne dans la table et vous demande de valider en cas de doute.</p>
+    <textarea id="imp-texte" rows="8" placeholder="claire.duval@ac-orleans-tours.fr&#10;LEROY Mehdi&#10;Anaïs Petit ; 0451234A">${esc(importEtat && importEtat.gid === g.id ? importEtat.texte : '')}</textarea>
+    <div class="rangee"><label class="btn">${ic('file-up')}Déposer un fichier CSV<input type="file" id="imp-fichier" accept=".csv,.txt,text/csv,text/plain" class="sr"></label><span style="flex:1"></span>
+      <button class="btn primaire" id="imp-chercher" data-gid="${g.id}">${ic('search')}Chercher les correspondances</button></div>
+    <p class="aide-texte">Seuls le nom, le prénom, le mail et l’UAI sont gardés dans le groupe. La liste ne quitte pas votre navigateur.</p>`;
+}
+function libellePersonne(p) { const e = parUai.get(p.uai); return `${nomDe(p)} ${prenomDe(p)}${e ? ` — ${e.nom}${e.commune ? ', ' + e.commune : ''}` : p.uai ? ` — ${p.uai}` : ''}`; }
+function htmlResultats(g) {
+  const es = importEtat.entrees;
+  const n = k => es.filter(e => e.res.etat === k).length;
+  const aAjouter = es.filter(e => e.choix).length;
+  const icone = { sur: ['check', 'trouvé'], doute: ['help', 'à vérifier'], introuvable: ['x', 'introuvable'] };
+  return `<div class="rangee"><button class="btn petit" data-g-vue="import" data-gid="${g.id}">${ic('back')}Modifier la liste</button><h3 style="flex:1">Correspondances pour « ${esc(g.nom)} »</h3></div>
+    <div class="rangee"><span class="g-etat sur">${ic('check')} ${pluriel(n('sur'), 'trouvée', 'trouvées')}</span><span class="g-etat doute">${ic('help')} ${n('doute')} à vérifier</span><span class="g-etat introuvable">${ic('x')} ${pluriel(n('introuvable'), 'introuvable', 'introuvables')}</span></div>
+    <div class="boite-tab"><table class="liste g-res"><thead><tr><th>Ligne de la liste</th><th></th><th>Personne retenue</th></tr></thead><tbody>
+    ${es.map((e, i) => {
+      const deja = e.choix && e.choix.startsWith('p:') && membreDe(personnes.find(p => 'p:' + p.id === e.choix) || {}, g.id).length;
+      const opts = [`<option value="">${e.res.etat === 'doute' ? '— à choisir —' : 'Ne pas ajouter'}</option>`]
+        .concat(e.res.choix.map(p => `<option value="p:${p.id}" ${e.choix === 'p:' + p.id ? 'selected' : ''}>${esc(libellePersonne(p))}</option>`))
+        .concat(e.uai ? [`<option value="libre" ${e.choix === 'libre' ? 'selected' : ''}>Ajouter hors table : ${esc((e.nom + ' ' + e.prenom).trim() || e.complet || e.mail)} — ${esc(e.uai)}</option>`] : [])
+        .concat(e.res.etat === 'doute' ? ['<option value="non">Ne pas ajouter</option>'] : []);
+      return `<tr class="g-${e.res.etat}"><td>${esc(e.brut)}</td><td><span class="g-etat ${e.res.etat}" title="${esc(e.res.raison)}">${ic(icone[e.res.etat][0])}${icone[e.res.etat][1]}</span>${e.res.raison ? `<div class="aide-texte">${esc(e.res.raison)}</div>` : ''}</td>
+        <td><select data-imp="${i}" aria-label="Personne retenue pour ${esc(e.brut)}">${opts.join('')}</select>${deja ? '<div class="aide-texte">déjà dans le groupe</div>' : ''}
+        ${e.res.etat === 'introuvable' ? `<div class="aide-texte">${e.uai ? `Absente de la table : choisissez « Ajouter hors table » pour la placer à ${esc(e.uai)}.` : 'Pour l’ajouter hors table, ajoutez son UAI sur la ligne (ex. « NOM Prénom ; 0451234A »).'}</div>` : ''}</td></tr>`;
+    }).join('')}</tbody></table></div>
+    <div class="rangee fin"><button class="btn" data-g-vue="liste">Annuler</button><button class="btn primaire" id="imp-valider" data-gid="${g.id}" ${aAjouter ? '' : 'disabled'}>${ic('user-plus')}Ajouter ${pluriel(aAjouter, 'personne', 'personnes')} au groupe</button></div>`;
+}
+function lancerRapprochement(gid, texteListe) {
+  const ix = indexPersonnes();
+  const entrees = analyserListe(texteListe).map(e => {
+    const res = rapprocher(e, ix);
+    return { ...e, res, choix: res.etat === 'sur' ? 'p:' + res.choix[0].id : '' };
+  });
+  importEtat = { gid, texte: texteListe, entrees };
+  if (!entrees.length) return toast('Je n’ai trouvé ni mail ni nom dans cette liste.');
+  vg = { vue: 'resultats', id: gid }; rendreGroupes();
+}
+async function validerImport(gid) {
+  const items = [];
+  for (const e of importEtat.entrees) {
+    if (!e.choix || e.choix === 'non') continue;
+    if (e.choix === 'libre') { const np = e.nom ? { nom: e.nom, prenom: e.prenom } : couperNom(e.complet); items.push({ Nom: np.nom, Prenom: np.prenom, Mail: e.mail, UAI: e.uai, Source: 'hors table' }); }
+    else { const p = personnes.find(x => 'p:' + x.id === e.choix); if (p) items.push(ligneMembre(p)); }
+  }
+  const r = await ajouterMembres(gid, items);
+  importEtat = null; vg = { vue: 'membres', id: gid }; rendreGroupes();
+  toast(`${pluriel(r.ajoutes, 'personne ajoutée', 'personnes ajoutées')}${r.deja ? ` (${r.deja} déjà dans le groupe)` : ''}.`);
+}
+function csvGroupe(g) {
+  const t = [['Groupe', 'Nom', 'Prénom', 'Mail', 'UAI', 'Établissement', 'Commune', 'Sur la carte']];
+  for (const m of membres.filter(x => x.groupe === g.id)) {
+    const e = parUai.get(m.uai) || {};
+    const place = [...lignesMembre.values()].some(l => l.includes(m));
+    t.push([g.nom, m.nom, m.prenom, m.mail, m.uai, e.nom || '', e.commune || '', place ? 'oui' : 'non']);
+  }
+  return csv(t);
+}
+async function enregistrerGroupe(id) {
+  const nom = $('g-nom').value.trim(), couleur = $('g-couleur').value, description = $('g-desc').value.trim();
+  if (!nom) { $('g-nom').focus(); return toast('Donnez un nom au groupe.'); }
+  if (groupes.some(g => g.id !== id && cleNom(g.nom) === cleNom(nom))) return toast('Un groupe porte déjà ce nom.');
+  try {
+    if (id) await actionsGroupes([['UpdateRecord', T_GROUPES, id, { Nom: nom, Couleur: couleur, Description: description }]]);
+    else await actionsGroupes([['AddRecord', T_GROUPES, null, { Nom: nom, Couleur: couleur, Description: description }]]);
+  } catch (e) { return toast(`Enregistrement impossible : ${e.message || e}`); }
+  vg = { vue: 'liste' };
+  await rafraichirGroupes();
+  toast(id ? 'Groupe modifié.' : `Groupe « ${nom} » créé. Ajoutez-lui des membres.`);
+}
+async function supprimerGroupe(id) {
+  const ids = membres.filter(m => m.groupe === id).map(m => m.id);
+  try { await actionsGroupes([...(ids.length ? [['BulkRemoveRecord', T_MEMBRES, ids]] : []), ['RemoveRecord', T_GROUPES, id]]); }
+  catch (e) { return toast(`Suppression impossible : ${e.message || e}`); }
+  vg = { vue: 'liste' }; await rafraichirGroupes();
+}
+function ouvrirChoixGroupes(bouton, p) {
+  if (!groupes.length) return ouvrirPop(bouton, `<h3>Ajouter à un groupe</h3><p class="aide-texte" style="margin:0">Aucun groupe pour l’instant.</p><button class="btn primaire" data-pop-groupes>${ic('users')}Créer un groupe</button>`, 280);
+  ouvrirPop(bouton, `<h3>Groupes de ${esc(`${nomDe(p)} ${prenomDe(p)}`)}</h3>
+    <div class="liste-cases">${groupes.map(g => `<label><input type="checkbox" data-gm="${g.id}" data-pid="${p.id}" ${membreDe(p, g.id).length ? 'checked' : ''}><span class="pastille" style="background:${esc(couleurGroupe(g))}"></span><span>${esc(g.nom)}</span></label>`).join('')}</div>
+    <button class="lien-btn" data-pop-groupes style="align-self:flex-start">Gérer les groupes…</button>`, 280);
+}
+function ouvrirAjoutSelection(bouton) {
+  const n = selection.size;
+  if (!groupes.length) return ouvrirChoixGroupes(bouton, null);
+  ouvrirPop(bouton, `<h3>Ajouter ${pluriel(n, 'personne', 'personnes')} à…</h3>
+    ${groupes.map(g => `<button class="btn" data-sel-groupe="${g.id}"><span class="pastille" style="background:${esc(couleurGroupe(g))}"></span>${esc(g.nom)}</button>`).join('')}
+    <button class="lien-btn" data-pop-groupes style="align-self:flex-start">Gérer les groupes…</button>`, 280);
+}
+
 // --- filtre
 function ouvrirFiltre() {
   const c = (filtre && filtre.col) || ($('pop').dataset.col) || colonneCouleurActive() || colonnesTable.find(x => analyserColonne(x).bon) || colonnesTable[0];
@@ -1501,8 +1931,9 @@ function csvEtabs() {
 }
 function csvPersonnes() {
   const cols = colonnesTable;
-  const t = [[...cols, 'Établissement', 'Commune', 'Latitude', 'Longitude']];
-  for (const e of trierEtabs()) for (const p of e.pers) t.push([...cols.map(c => texte(p.rec[c])), e.nom, e.commune, e.lat, e.lon]);
+  const g = groupes.length;
+  const t = [[...cols, 'Établissement', 'Commune', 'Latitude', 'Longitude', ...(g ? ['Groupes'] : [])]];
+  for (const e of trierEtabs()) for (const p of e.pers) t.push([...cols.map(c => texte(p.rec[c])), e.nom, e.commune, e.lat, e.lon, ...(g ? [(appartenances.get(p.id) || []).join(', ')] : [])]);
   return csv(t);
 }
 function dessinerLegende(g, k) {
@@ -1693,7 +2124,7 @@ function rendreTableau() {
     <div class="rangee"><button class="btn" id="tab-retour">${ic('back')}Carte</button><h1>Tableau de bord</h1>
       <span style="color:var(--doux)">${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtre || masquees.size ? ' · filtres de la carte appliqués' : ''}</span>
       <span style="flex:1"></span><button class="btn" data-export="csv-etabs">${ic('file-down')}CSV</button></div>
-    <div class="blocs">${barres('Par département', compte(e => e.dep), '#33c1e8')}${barres('Par type d’établissement', compte(e => e.typeLib), '#64748b')}${barres(`Par catégorie (${colonneCouleurActive() || 'aucune'})`, cats)}</div>
+    <div class="blocs">${barres('Par département', compte(e => e.dep), '#33c1e8')}${barres('Par type d’établissement', compte(e => e.typeLib), '#64748b')}${barres(`Par catégorie (${reglages.couleur.source === 'groupes' ? 'groupes' : colonneCouleurActive() || 'aucune'})`, cats)}</div>
     <section class="bloc" id="liste-etabs" aria-label="Liste des établissements">
       <div class="rangee"><h2>Liste des établissements</h2><span class="aide-texte">alternative à la carte : Tab pour avancer, Entrée sur un nom pour ouvrir sa fiche</span><span style="flex:1"></span>
         <button class="btn primaire" id="tab-ecrire" ${selection.size ? '' : 'disabled'}>${ic('mail')}${selection.size ? `Écrire aux ${pluriel(selection.size, 'personne', 'personnes')} de la sélection…` : 'Cochez des établissements pour écrire'}</button></div>
@@ -1729,6 +2160,7 @@ const VISITE = [
   { cible: '#zone-recherche', titre: 'Rechercher', texte: 'Tapez un nom, un établissement ou une commune : la carte s’y place et ouvre la fiche.' },
   { cible: '#b-couleurs', titre: 'Colorier selon…', texte: 'Choisissez la colonne qui donne la couleur des points (grade, discipline, groupe…). Le widget vous propose les bonnes colonnes.' },
   { cible: '#b-bulles', titre: 'Contenu des bulles', texte: 'Choisissez ce que montrent le survol et la fiche : colonnes, ordre, modèle de ligne, avec un aperçu.' },
+  { cible: '#b-groupes', titre: 'Groupes', texte: 'Créez des groupes (formateur·trices, tuteur·trices…), ajoutez-y des personnes depuis une liste de mails ou de noms, et voyez-les en couleur sur la carte. Demande l’accès complet au document.' },
   { cible: '#legende', titre: 'Légende', texte: 'Cliquez une catégorie pour la masquer ou la montrer. « Fond d’établissements » ajoute en gris tous les établissements de l’académie.' },
   { cible: '#carte', titre: 'Les points', texte: 'Un point par établissement, en camembert si les couleurs se mêlent ; le badge donne le nombre de personnes. Survolez pour le nom, cliquez pour la fiche.' },
   { cible: '#b-selection', titre: 'Sélection et mails', texte: 'Entourez des établissements, ou cochez des personnes dans les fiches, puis « Écrire… » : à une personne, un établissement ou toute une sélection.' },
@@ -1779,6 +2211,7 @@ function rendreVisite() {
 document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic); });
 $('b-couleurs').onclick = ouvrirCouleurs;
 $('b-bulles').onclick = ouvrirBulles;
+$('b-groupes').onclick = () => ouvrirGroupes();
 $('b-filtre').onclick = ouvrirFiltre;
 $('b-depart').onclick = ouvrirDepart;
 $('b-selection').onclick = () => basculerModeSelection();
@@ -1802,7 +2235,7 @@ $('menu-aide').onclick = ev => {
 };
 document.addEventListener('click', ev => {
   if (!$('menu-aide').hidden && !ev.target.closest('#menu-aide, #b-aide')) { $('menu-aide').hidden = true; $('b-aide').setAttribute('aria-expanded', 'false'); }
-  if (!$('pop').hidden && !ev.target.closest('#pop') && !ev.target.closest('.barre')) fermerPop();
+  if (!$('pop').hidden && !ev.target.closest('#pop') && !ev.target.closest('.barre') && !(popPour && popPour.contains(ev.target))) fermerPop();
   if (!$('resultats').hidden && !ev.target.closest('#zone-recherche')) $('resultats').hidden = true;
 });
 document.addEventListener('keydown', ev => {
@@ -1850,6 +2283,7 @@ $('statut').addEventListener('click', ev => {
 $('barre-selection').addEventListener('click', ev => {
   if (ev.target.closest('#sel-ecrire')) ouvrirMail('selection');
   if (ev.target.closest('#sel-copier')) copierAdresses('selection');
+  if (ev.target.closest('#sel-groupe')) ouvrirAjoutSelection(ev.target.closest('#sel-groupe'));
   if (ev.target.closest('#sel-vider')) { selection.clear(); apresSelection(); }
 });
 // fiche
@@ -1861,6 +2295,8 @@ $('fiche').addEventListener('click', ev => {
     return;
   }
   const g = ev.target.closest('[data-grist]'); if (g) return voirDansGrist(+g.dataset.grist);
+  const gd = ev.target.closest('[data-groupes-de]');
+  if (gd) { const p = personnes.find(x => x.id === +gd.dataset.groupesDe); if (p) ouvrirChoixGroupes(gd, p); }
 });
 $('fiche').addEventListener('change', ev => {
   const e = parUai.get(ficheUai); if (!e) return;
@@ -1869,7 +2305,14 @@ $('fiche').addEventListener('change', ev => {
   if (s) { ev.target.checked ? selection.add(+s) : selection.delete(+s); apresSelection(); const n = $('fiche').querySelector(`[data-sel="${s}"]`); if (n) n.focus(); }
 });
 // popovers
-$('pop').addEventListener('change', ev => {
+$('pop').addEventListener('change', async ev => {
+  if (ev.target.dataset.gm) {
+    const gid = +ev.target.dataset.gm, p = personnes.find(x => x.id === +ev.target.dataset.pid); if (!p) return;
+    ev.target.disabled = true;
+    if (ev.target.checked) await ajouterMembres(gid, [ligneMembre(p)]); else await retirerMembres(membreDe(p, gid).map(m => m.id));
+    const b = popPour; fermerPop(); if (b && document.body.contains(b)) b.focus();
+    return;
+  }
   if (ev.target.id === 'fi-col') { rendreFiltre(ev.target.value); return; }
   if (ev.target.dataset.fv != null) return lireFiltre();
   if (ev.target.dataset.rayon) {
@@ -1894,6 +2337,13 @@ $('pop').addEventListener('click', ev => {
   if (id === 'de-retirer') { definirDepart(null); fermerPop(); }
   if (id === 'de-clic') { modeDepartClic = true; document.body.classList.add('mode-depart'); fermerPop(); toast('Cliquez sur la carte pour placer le point de départ.'); }
   const ex = ev.target.closest('[data-export]'); if (ex) { fermerPop(); faireExport(ex.dataset.export); }
+  if (ev.target.closest('[data-pop-groupes]')) { fermerPop(); ouvrirGroupes(); }
+  const sg = ev.target.closest('[data-sel-groupe]');
+  if (sg) {
+    const gid = +sg.dataset.selGroupe; fermerPop();
+    ajouterMembres(gid, personnes.filter(p => selection.has(p.id)).map(p => ligneMembre(p)))
+      .then(r => toast(`${pluriel(r.ajoutes, 'personne ajoutée', 'personnes ajoutées')} à « ${(groupes.find(g => g.id === gid) || {}).nom} »${r.deja ? ` (${r.deja} déjà membres)` : ''}.`));
+  }
 });
 function faireExport(k) {
   if (k === 'png') exporterPng();
@@ -1954,11 +2404,26 @@ $('modale').addEventListener('click', ev => {
   if (id === 'col-vider') { geo = {}; annu = {}; local.oublier('geo'); local.oublier('annuaire'); toast('Copie vidée : les coordonnées sont redemandées à l’open data.'); fermerModale(); recalculer(); return; }
   if (id === 'col-ecrire') return ecrireCoordonnees();
   if (b.dataset.grist) return voirDansGrist(+b.dataset.grist);
+  // groupes
+  if (id === 'g-creer-tables') return creerTablesGroupes();
+  if (id === 'g-enregistrer') return enregistrerGroupe(b.dataset.id ? +b.dataset.id : null);
+  if (id === 'g-voir') { reglages.couleur = { ...reglages.couleur, source: 'groupes' }; masquees.clear(); sauver(); fermerModale(); recalculer(); return; }
+  if (id === 'g-quitter-mode') { reglages.couleur = { ...reglages.couleur, source: reglages.couleur.col ? 'categorie' : 'aucune' }; masquees.clear(); sauver(); recalculer(); rendreGroupes(); return; }
+  if (b.dataset.nuance) { $('g-couleur').value = b.dataset.nuance; $('modale').querySelectorAll('[data-nuance]').forEach(x => x.setAttribute('aria-pressed', String(x === b))); return; }
+  if (b.dataset.gVue) { vg = { vue: b.dataset.gVue, id: b.dataset.gid ? +b.dataset.gid : vg.id }; return rendreGroupes(); }
+  if (b.dataset.gImport) { vg = { vue: 'import', id: +b.dataset.gImport }; return rendreGroupes(); }
+  if (b.dataset.gMembres) { vg = { vue: 'membres', id: +b.dataset.gMembres }; return rendreGroupes(); }
+  if (b.dataset.gEditer) { vg = { vue: 'editer', id: +b.dataset.gEditer }; return rendreGroupes(); }
+  if (b.dataset.gCsv) { const g = groupes.find(x => x.id === +b.dataset.gCsv); return telecharger(`carto-profs-groupe-${sansAccents(g.nom).replace(/[^a-z0-9]+/g, '-')}-${date()}.csv`, csvGroupe(g)); }
+  if (b.dataset.gSuppr) { const gid = +b.dataset.gSuppr; if (vg.confirmer === gid) return supprimerGroupe(gid); vg.confirmer = gid; return rendreGroupes(); }
+  if (b.dataset.mSuppr) return retirerMembres([+b.dataset.mSuppr]);
+  if (id === 'imp-chercher') return lancerRapprochement(+b.dataset.gid, $('imp-texte').value);
+  if (id === 'imp-valider') return validerImport(+b.dataset.gid);
   // mails
   if (b.dataset.champ) { etatMail.champ = b.dataset.champ; rendreMail(true); return; }
   if (id === 'mail-copier') { const d = destinataires(etatMail.qui, etatMail.ids); copier([...d.principaux, ...d.cc].join('; ')).then(() => toast(`${pluriel(d.principaux.length + d.cc.length, 'adresse copiée', 'adresses copiées')}.`)); return; }
 });
-$('modale').addEventListener('change', ev => {
+$('modale').addEventListener('change', async ev => {
   const t = ev.target;
   if (t.type === 'color' && t.dataset.val != null) { t.dataset.touche = '1'; brouillonCouleur.valeurs[t.dataset.val] = t.value; return; }
   if (t.name === 'mail-qui') { etatMail.qui = t.value; rendreMail(true); if (t.value === 'etabs' || t.value === 'mixte') chargerAnnuaire(destinataires(t.value, etatMail.ids).base.map(p => p.uai)).then(ch => { if (ch && $('mail-lots')) rendreMail(true); }); return; }
@@ -1967,6 +2432,13 @@ $('modale').addEventListener('change', ev => {
   if (t.dataset.survol) { brouillonBulles.survol[t.dataset.survol] = t.checked; majApercuBulles(); return; }
   if (t.dataset.opt) { brouillonBulles[t.dataset.opt] = t.checked; majApercuBulles(); return; }
   if (t.id === 'bu-tri') { brouillonBulles.tri = t.value || null; return; }
+  if (t.dataset.imp != null) { importEtat.entrees[+t.dataset.imp].choix = t.value === 'non' ? '' : t.value; rendreGroupes(); return; }
+  if (t.id === 'imp-fichier' && t.files && t.files[0]) {
+    const f = t.files[0], lire = enc => new Promise(res => { const r = new FileReader(); r.onload = () => res(String(r.result)); r.readAsText(f, enc); });
+    let txt = await lire('utf-8'); if (txt.includes('\uFFFD')) txt = await lire('windows-1252');   // CSV d’Excel
+    $('imp-texte').value = txt.replace(/^\uFEFF/, ''); toast(`Fichier « ${f.name} » chargé : cliquez sur « Chercher les correspondances ».`);
+    return;
+  }
 });
 $('modale').addEventListener('input', ev => {
   if (ev.target.id === 'bu-modele') { brouillonBulles.modele = ev.target.value; majApercuBulles(); }
@@ -2016,6 +2488,12 @@ function demarrerDemo() {
   lignes = DEMO.map((r, i) => ({ id: i + 1, ...r }));
   reglages.configure = true; reglages.couleur.col = 'Grade';
   recuLignes = recuOptions = true;
+  // un groupe d’exemple, gardé en mémoire seulement (hors de Grist rien n’est enregistré)
+  const ex = DEMO.slice(0, 40).filter((_, i) => i % 5 === 0);
+  appliquerMemoire([['AddRecord', T_GROUPES, null, { Nom: 'Formateur·trices (exemple)', Couleur: '#0d9488', Description: 'Groupe fictif de démonstration' }],
+    ['BulkAddRecord', T_MEMBRES, ex.map(() => null), { Groupe: ex.map(() => 1), Nom: ex.map(r => r.Nom), Prenom: ex.map(r => r.Prenom), Mail: ex.map(r => r.mail_ouvert || ''), UAI: ex.map(r => r.Rne || ''), Source: ex.map(() => 'table') }],
+    ['AddRecord', T_MEMBRES, null, { Groupe: 1, Nom: 'MARTEL', Prenom: 'Sonia', Mail: 'sonia.martel@exemple.invalid', UAI: DEMO[1].Rne, Source: 'hors table' }]]);
+  chargerGroupes();
   recalculer(); premierDemarrage();
 }
 function initGrist() {
@@ -2024,6 +2502,7 @@ function initGrist() {
   grist.onOptions((o, interaction) => {
     if (interaction && interaction.accessLevel) acces = interaction.accessLevel;
     $('sans-acces').hidden = acces !== 'none';
+    if (acces === 'full' && tablesGroupes === null) chargerGroupes().then(() => { if (recuLignes) recalculer(); });
     reglages = fusion(reglagesParDefaut(), o || {});
     recuOptions = true;
     if (recuLignes) { recalculer(); if (reglages.fond.actif) chargerFond(); }

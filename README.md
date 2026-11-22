@@ -47,7 +47,12 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
 
 ## Droits
 
-- **Widget** : « Lire la table sélectionnée » suffit. Il ne crée ni n’écrit rien.
+- **Widget** : « Lire la table sélectionnée » suffit pour la carte. Il ne crée ni n’écrit rien.
+- **Groupes** : demandent l’**accès complet au document**. Le widget crée deux tables, `Carto_groupes` (`Nom`,
+  `Couleur`, `Description`) et `Carto_membres` (`Groupe` → Carto_groupes, `Nom`, `Prenom`, `Mail`, `UAI`, `Source`).
+  Les membres sont retrouvés dans la table des personnes par mail, puis nom + prénom + UAI, puis nom + prénom :
+  les groupes suivent quand la table est remplacée l’année suivante. Un membre absent de la table mais avec un UAI
+  est placé quand même (« hors table »).
 - **Option « Écrire les coordonnées »** (bouton Colonnes) : ajoute et remplit `Latitude` / `Longitude` ; demande
   l’**accès complet au document**. À n’accorder que si on s’en sert.
 - **Réglages** (couleurs, bulles, fond d’établissements…) : gardés dans les **options du widget**, donc dans le
@@ -84,6 +89,10 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
   10 / 20 / 50 km et distances.
 - **Sélection** (fiches, rectangle sur la carte, liste) et **mails** : sélection, personnes affichées, établissements,
   personnes + établissement en copie ; Cci par défaut ; lots de 40 adresses ; copie des adresses.
+- **Groupes** : nom, couleur, description ; membres ajoutés depuis la fiche, la sélection, ou une liste collée / un CSV
+  (mails, « NOM Prénom », tableau avec titres) avec rapprochement automatique et validation des doutes (homonymes, noms
+  approchés) ; membres hors table placés par leur UAI ; coloriage par groupes (camembert si plusieurs, « Hors groupe »
+  en gris, masquable) ; CSV par groupe.
 - **Tableau de bord** (département, type, catégorie), **liste** accessible au clavier, exports **PNG**, **CSV**,
   impression **A4**, **mode présentation**.
 - UAI introuvables et lignes sans UAI signalés avec une aide ; démonstration hors de Grist.

@@ -438,7 +438,7 @@ def test_visite_guidee_reste_dans_le_cadre(navigateur, serveur):
     envoyer(page, options=CONFIGURE)
     v = page.locator("#visite")
     expect(v).to_be_visible(timeout=4000)
-    for _ in range(8):
+    for _ in range(12):
         b = v.bounding_box()
         assert b["x"] >= 0 and b["y"] >= 0 and b["x"] + b["width"] <= 420 and b["y"] + b["height"] <= 520, b
         if page.locator("#vi-suiv").inner_text() == "Terminer":
@@ -457,7 +457,7 @@ def test_menu_aide_et_presentation(page_prete):
     page.locator("#b-aide").click()
     expect(page.get_by_role("menuitem", name="Visite guidée")).to_be_visible()
     page.get_by_role("menuitem", name="Quoi de neuf ?").click()
-    expect(page.locator("#modale")).to_contain_text("Version 1.1.0")
+    expect(page.locator("#modale")).to_contain_text("Version 1.2.0")
     page.keyboard.press("Escape")
     page.locator("#b-presentation").click()
     expect(page.locator("#barre")).to_be_hidden()
@@ -495,3 +495,147 @@ def test_sans_acces(navigateur, serveur):
     expect(page.locator("#sans-acces")).to_be_hidden()
     assert erreurs == []
     page.context.close()
+
+
+# ---------------------------------------------------------------------------------------------------------------- groupes
+@pytest.fixture
+def page_groupes(navigateur, serveur):
+    page, appels, erreurs = preparer(navigateur, serveur)
+    page.evaluate("localStorage.setItem('carto-profs:visite', JSON.stringify({n: 9, finie: true}))")
+    envoyer(page, options=CONFIGURE, acces="full")
+    page.wait_for_function("document.querySelectorAll('.pt').length === 3")
+    yield page, appels, erreurs
+    assert erreurs == [], erreurs
+    page.context.close()
+
+
+def creer_groupe(page, nom, couleur_idx=0):
+    page.locator("#g-nom").fill(nom)
+    page.locator("[data-nuance]").nth(couleur_idx).click()
+    page.locator("#g-enregistrer").click()
+    page.wait_for_function(f"window.__grist.tables.Carto_groupes && window.__grist.tables.Carto_groupes.lignes.some(r => r.Nom === {json.dumps(nom)})")
+
+
+def test_groupes_lecture_seule(navigateur, serveur):
+    page, _, erreurs = preparer(navigateur, serveur)
+    envoyer(page, options=CONFIGURE)  # lire la table seulement
+    page.locator("#b-groupes").click()
+    expect(page.locator("#modale")).to_contain_text("accès complet au document")
+    assert erreurs == []
+    page.context.close()
+
+
+def test_groupes_creation_ajout_et_carte(page_groupes):
+    page, _, _ = page_groupes
+    page.locator("#b-groupes").click()
+    m = page.locator("#modale")
+    expect(m).to_contain_text("Carto_groupes")
+    page.locator("#g-creer-tables").click()
+    page.wait_for_function("window.__grist.tables.Carto_membres")
+    expect(m).to_contain_text("Aucun groupe pour l’instant")
+    creer_groupe(page, "Formateurs", 2)
+    creer_groupe(page, "Tuteurs", 3)
+    expect(m.locator(".g-ligne")).to_have_count(2)
+    # ajout depuis la fiche
+    page.keyboard.press("Escape")
+    page.locator('.pt[data-uai="0459901A"]').click()
+    page.locator('#fiche [data-groupes-de="1"]').click()
+    page.locator('#pop input[data-gm]').first.check()   # Formateurs (ordre alphabétique)
+    page.wait_for_function("window.__grist.tables.Carto_membres.lignes.length === 1")
+    r = page.evaluate("window.__grist.tables.Carto_membres.lignes[0]")
+    assert r["Nom"] == "DUVAL" and r["Mail"] == "claire.duval@exemple.invalid" and r["UAI"] == "0459901A" and r["Groupe"] == 1
+    expect(page.locator("#fiche li").first).to_contain_text("Formateurs")
+    # ajout depuis la sélection
+    page.locator('#fiche #fiche-tous').check()
+    page.locator("#sel-groupe").click()
+    page.locator('#pop [data-sel-groupe="2"]').click()
+    page.wait_for_function("window.__grist.tables.Carto_membres.lignes.length === 3")
+    # voir les groupes sur la carte : camembert pour DUVAL (2 groupes), légende Groupes + Hors groupe
+    page.locator("#b-groupes").click()
+    page.locator("#g-voir").click()
+    leg = page.locator("#legende")
+    expect(leg).to_contain_text("Groupes")
+    expect(leg.locator(".leg-item")).to_have_count(3)
+    expect(leg.locator('[data-cat="Hors groupe"]')).to_contain_text("6")   # compte aussi les personnes sans place sur la carte
+    fond = page.locator('.pt[data-uai="0459901A"]').evaluate("e => e.style.background")
+    assert "conic-gradient" in fond
+    page.wait_for_function("window.__grist.options && window.__grist.options.couleur.source === 'groupes'")
+    # cacher les personnes hors groupe
+    leg.locator('[data-cat="Hors groupe"]').click()
+    assert len(etat(page, "visibles")) == 2
+    expect(page.locator(".pt")).to_have_count(1)
+
+
+def test_groupes_import_liste(page_groupes):
+    page, _, _ = page_groupes
+    page.locator("#b-groupes").click(); page.locator("#g-creer-tables").click()
+    page.wait_for_function("window.__grist.tables.Carto_membres")
+    creer_groupe(page, "IREM")
+    page.locator("[data-g-import]").first.click()
+    liste = "\n".join([
+        "claire.duval@exemple.invalid",        # sûr par mail
+        "LEROY Mehdi",                          # sûr par nom
+        "Anais Petit",                          # sûr malgré l'accent manquant
+        "ROUSEL Jonas",                         # approché → à vérifier
+        "MARTEL Sonia ; 0459901A",              # inconnue, UAI → hors table possible
+        "Inconnu Total",                        # introuvable
+    ])
+    page.locator("#imp-texte").fill(liste)
+    page.locator("#imp-chercher").click()
+    m = page.locator("#modale")
+    expect(m).to_contain_text("3 trouvées")
+    expect(m).to_contain_text("1 à vérifier")
+    expect(m).to_contain_text("2 introuvables")
+    expect(page.locator("#imp-valider")).to_contain_text("Ajouter 3 personnes")
+    # valider le doute, ajouter Sonia hors table
+    page.locator('select[data-imp="3"]').select_option(index=1)
+    page.locator('select[data-imp="4"]').select_option("libre")
+    expect(page.locator("#imp-valider")).to_contain_text("Ajouter 5 personnes")
+    page.locator("#imp-valider").click()
+    page.wait_for_function("window.__grist.tables.Carto_membres.lignes.length === 5")
+    lignes = page.evaluate("window.__grist.tables.Carto_membres.lignes")
+    assert {l["Nom"] for l in lignes} == {"DUVAL", "LEROY", "PETIT", "ROUSSEL", "MARTEL"}
+    assert [l["Source"] for l in lignes if l["Nom"] == "MARTEL"] == ["hors table"]
+    expect(m).to_contain_text("IREM · 5 membres")
+    expect(m).to_contain_text("hors table")
+    # en mode groupes, le membre hors table est sur la carte, dans le lycée du Val
+    page.keyboard.press("Escape")
+    page.locator("#b-couleurs").click()
+    page.locator('input[name="cc-col"][value="__groupes"]').check(); page.locator("#cc-suivant").click(); page.locator("#cc-appliquer").click()
+    expect(page.locator('.pt[data-uai="0459901A"] .badge')).to_have_text("3")
+    page.locator('.pt[data-uai="0459901A"]').click()
+    expect(page.locator("#fiche")).to_contain_text("MARTEL Sonia")
+    expect(page.locator("#fiche")).to_contain_text("hors table")
+    # réimport : rien en double
+    page.locator("#b-groupes").click(); page.locator("[data-g-import]").first.click()
+    page.locator("#imp-texte").fill("claire.duval@exemple.invalid")
+    page.locator("#imp-chercher").click()
+    expect(m).to_contain_text("déjà dans le groupe")
+    page.locator("#imp-valider").click()
+    expect(page.locator("#toast")).to_contain_text("0 personne ajoutée (1 déjà dans le groupe)")
+
+
+def test_groupes_csv_import_entetes_et_suppression(page_groupes):
+    page, _, _ = page_groupes
+    page.locator("#b-groupes").click(); page.locator("#g-creer-tables").click()
+    page.wait_for_function("window.__grist.tables.Carto_membres")
+    creer_groupe(page, "Tuteurs")
+    page.locator("[data-g-import]").first.click()
+    page.locator("#imp-fichier").set_input_files(files=[{"name": "tuteurs.csv", "mimeType": "text/csv",
+        "buffer": "Nom;Prénom;Mail\nBLANC;Yanis;\nPETIT;Anaïs;\n".encode("utf-8")}])
+    expect(page.locator("#imp-texte")).to_have_value(re.compile("BLANC;Yanis"))
+    page.locator("#imp-chercher").click()
+    expect(page.locator("#modale")).to_contain_text("2 trouvées")
+    page.locator("#imp-valider").click()
+    page.wait_for_function("window.__grist.tables.Carto_membres.lignes.length === 2")
+    # CSV du groupe
+    page.locator("[data-g-vue=liste]").first.click()
+    with page.expect_download() as dl:
+        page.locator("[data-g-csv]").first.click()
+    contenu = Path(dl.value.path()).read_text(encoding="utf-8-sig")
+    assert contenu.splitlines()[0].startswith("Groupe;Nom;Prénom;Mail;UAI") and "Tuteurs;BLANC;Yanis" in contenu
+    # suppression en deux clics, avec les membres
+    page.locator("[data-g-suppr]").first.click()
+    expect(page.locator("[data-g-suppr]").first).to_contain_text("Confirmer")
+    page.locator("[data-g-suppr]").first.click()
+    page.wait_for_function("window.__grist.tables.Carto_groupes.lignes.length === 0 && window.__grist.tables.Carto_membres.lignes.length === 0")

@@ -72,6 +72,7 @@ summary { cursor: pointer; font-weight: 600; }
   <li><a href="#chercher">Chercher, filtrer, légende</a></li>
   <li><a href="#depart">Point de départ</a></li>
   <li><a href="#mails">Sélection et mails</a></li>
+  <li><a href="#groupes">Groupes</a></li>
   <li><a href="#vues">Tableau de bord et exports</a></li>
   <li><a href="#partager">Partager, droits, confidentialité</a></li>
   <li><a href="#problemes">En cas de souci</a></li>
@@ -241,8 +242,54 @@ summary { cursor: pointer; font-weight: 600; }
   </ul>
 </section>
 
+<section id="groupes">
+  <h2><span class="num">11</span>Groupes</h2>
+  <p>Un <b>groupe</b> rassemble des personnes que vous voulez voir ensemble : formateur·trices, tuteur·trices, membres d’un
+  groupe de travail… Chaque groupe a un nom, une couleur et une description. Une personne peut être dans plusieurs groupes.</p>
+  <div class="attention">Les groupes sont enregistrés dans deux tables du document, <code>Carto_groupes</code> et
+  <code>Carto_membres</code>, créées par le widget la première fois. Il faut donc l’<b>accès complet au document</b>
+  (panneau de droite de Grist, rubrique Accès).</div>
+  <h3>Créer un groupe</h3>
+  <ol class="etapes"><li><span>Bouton <b>Groupes</b> ; la première fois, <b>Créer les tables</b>.</span></li>
+    <li><span>Sous « Nouveau groupe » : nom, couleur, description, puis <b>Créer le groupe</b>.</span></li></ol>
+  <h3>Ajouter des membres</h3>
+  <ul>
+    <li><b>Une personne</b> : cherchez-la (barre de recherche), puis dans la fiche cliquez sur l’icône
+      <svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>
+      à côté de son nom et cochez le groupe.</li>
+    <li><b>Toute une sélection</b> : barre de sélection → <b>Ajouter à un groupe…</b></li>
+    <li><b>Une liste</b> : dans la fenêtre Groupes, <b>Ajouter des membres</b>. Collez des mails (même copiés d’un champ
+      « À : » de messagerie), des lignes « NOM Prénom », ou un tableau avec une ligne de titres (Nom, Prénom, Mail, UAI) ;
+      ou déposez un fichier CSV. Puis <b>Chercher les correspondances</b>.</li>
+  </ul>
+  <figure>
+    <div class="capture"><div class="m-panneau" style="max-width:560px;font-size:12px">
+      <div style="display:flex;gap:14px;margin-bottom:6px"><b style="color:#047857">✓ 3 trouvées</b><b style="color:#92400e">? 1 à vérifier</b><b style="color:#b91c1c">× 1 introuvable</b></div>
+      <div class="m-ligne"><span style="flex:1">claire.duval@…</span><span style="color:#047857">trouvée · même mail</span><span class="m-btn">DUVAL Claire — Lycée du Val</span></div>
+      <div class="m-ligne" style="background:#fffbeb"><span style="flex:1">ROUSEL Jonas</span><span style="color:#92400e">à vérifier · nom approché</span><span class="m-btn">— à choisir —</span></div>
+      <div class="m-ligne"><span style="flex:1">MARTEL Sonia ; 0459901A</span><span style="color:#b91c1c">introuvable</span><span class="m-btn">Ajouter hors table</span></div>
+    </div><span class="etiq-fictive">capture fictive</span></div>
+    <figcaption>Le widget retrouve chaque ligne dans la table : par le mail, puis par le nom et le prénom (accents et majuscules sans importance), puis par un nom approché.</figcaption>
+  </figure>
+  <ul>
+    <li><b>Trouvée</b> : ajoutée si vous validez. <b>À vérifier</b> (homonymes, nom approché, même nom mais mail différent) : choisissez la bonne personne dans la liste, ou « Ne pas ajouter ».</li>
+    <li><b>Introuvable</b> : si la ligne contient un UAI, vous pouvez l’ajouter <b>hors table</b> (une personne d’une autre discipline, un·e CPE…) : elle est placée sur la carte à son établissement.</li>
+    <li>Une personne déjà dans le groupe n’est jamais ajoutée deux fois.</li>
+  </ul>
+  <h3>Voir les groupes sur la carte</h3>
+  <p><b>Voir les groupes sur la carte</b> (ou Colorier → Groupes) : chaque membre prend la couleur de son groupe,
+  en camembert s’il est dans plusieurs. Les autres personnes sont en gris (« Hors groupe » dans la légende) :
+  cliquez sur « Hors groupe » pour les cacher, ou sur un groupe pour le cacher.</p>
+  <h3>Gérer, exporter</h3>
+  <p>Pour chaque groupe : <b>Membres</b> (liste, retrait d’un membre), modifier (nom, couleur, description), <b>CSV</b>
+  des membres, supprimer (deux clics : le groupe et ses membres). Les tables <code>Carto_groupes</code> et
+  <code>Carto_membres</code> se consultent et se modifient aussi directement dans Grist.</p>
+  <div class="astuce">Les membres sont retrouvés par leur mail ou leur nom : quand la table des professeur·es est
+  remplacée l’année suivante, les groupes suivent sans rien refaire.</div>
+</section>
+
 <section id="vues">
-  <h2><span class="num">11</span>Tableau de bord, liste et exports</h2>
+  <h2><span class="num">12</span>Tableau de bord, liste et exports</h2>
   <div class="icones">
     <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span><b>Tableau de bord</b> : personnes par département, par type d’établissement, par catégorie.</span></div>
     <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg><span><b>Liste</b> des établissements, triable, utilisable au clavier (alternative à la carte).</span></div>
@@ -255,9 +302,10 @@ summary { cursor: pointer; font-weight: 600; }
 </section>
 
 <section id="partager">
-  <h2><span class="num">12</span>Partager, droits, confidentialité</h2>
+  <h2><span class="num">13</span>Partager, droits, confidentialité</h2>
   <ul>
     <li><b>Droits du widget</b> : « Lire la table sélectionnée » suffit. Le widget ne crée rien et n’écrit rien dans le document.</li>
+    <li><b>Groupes</b> : deux tables <code>Carto_groupes</code> et <code>Carto_membres</code> dans le document ; accès <b>complet</b> nécessaire. Sans groupes, la lecture suffit.</li>
     <li><b>Option « Écrire les coordonnées »</b> (bouton Colonnes) : ajoute deux colonnes Latitude et Longitude à la table et les remplit. Elle demande l’accès <b>complet</b> au document : à n’activer que si vous en avez l’usage.</li>
     <li><b>Réglages partagés</b> : couleurs, bulles, fond d’établissements… sont gardés <b>dans le document</b>. Tous ses lecteurs voient la même carte. Seules les personnes qui peuvent modifier le document les enregistrent ; un lecteur peut les changer pour sa session.</li>
     <li><b>Préférences personnelles</b> (point de départ, thème, visite guidée) : gardées dans votre navigateur.</li>
@@ -267,8 +315,8 @@ summary { cursor: pointer; font-weight: 600; }
 </section>
 
 <section id="problemes">
-  <h2><span class="num">13</span>En cas de souci</h2>
-  <details><summary>La carte reste vide</summary><p>Vérifiez que la vue Personnalisé est bien liée à votre table et que l’accès « Lire la table sélectionnée » est accordé. Ouvrez le bouton Colonnes : la colonne UAI doit être choisie.</p></details>
+  <h2><span class="num">14</span>En cas de souci</h2>
+  <details><summary>La carte reste vide, les menus sont vides</summary><p>Le widget ne reçoit pas les lignes de la table. À l’installation, Grist laisse l’accès sur « Aucun accès » : dans le panneau de droite, rubrique Accès, choisissez « Lire la table sélectionnée » (ou « Accès complet au document » pour les groupes). Vérifiez aussi que la vue est liée à votre table (panneau de droite → Données). Un message en bas à gauche indique ce cas. Ensuite, le bouton Colonnes doit montrer la colonne UAI.</p></details>
   <details><summary>« Les données ouvertes ne répondent pas »</summary><p>Le site data.education.gouv.fr est momentanément indisponible ou bloqué par votre réseau. Cliquez sur « Réessayer l’open data » plus tard. Les établissements déjà trouvés restent affichés (copie du navigateur).</p></details>
   <details><summary>Un établissement est mal placé</summary><p>La position vient de l’open data. Pour la corriger, ajoutez des colonnes <code>Latitude</code> et <code>Longitude</code> à la table et remplissez-les pour cette ligne : elles passent avant l’open data.</p></details>
   <details><summary>Le bouton « Écrire » n’ouvre rien</summary><p>Votre navigateur n’a pas de messagerie par défaut. Utilisez « Copier les adresses » et collez-les dans votre messagerie, en Cci.</p></details>
