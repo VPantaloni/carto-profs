@@ -472,6 +472,8 @@ def test_demonstration_hors_grist(navigateur, serveur):
     expect(page.locator("#bandeau-demo")).to_be_visible()
     page.wait_for_function("document.querySelectorAll('.pt').length > 10")
     expect(page.locator("#lib-couleur")).to_have_text("Grade")
+    page.locator("#demo-visite").click()
+    expect(page.locator("#visite")).to_be_visible()
     assert erreurs == []
     page.context.close()
 
@@ -724,5 +726,9 @@ def test_page_accueil(navigateur, serveur):
     demo = page.frame_locator("iframe")
     expect(demo.locator("#bandeau-demo")).to_be_visible()
     expect(demo.locator(".pt").first).to_be_attached()
+    expect(demo.locator("#visite")).to_be_hidden()          # pas de visite imposée dans la démo intégrée…
+    page.get_by_role("button", name="Visite guidée de la démonstration").click()
+    expect(page.frame_locator("iframe").locator("#visite")).to_be_visible()   # … mais proposée
+    expect(page.frame_locator("iframe").locator("#visite")).to_contain_text("1 sur")
     assert erreurs == [], erreurs
     ctx.close()

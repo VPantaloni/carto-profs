@@ -96,9 +96,10 @@ footer { margin-top: 48px; padding: 24px 0 40px; border-top: 1px solid var(--lig
 
 <section aria-labelledby="t-coup">
   <h2 id="t-coup">Le widget en un coup d’œil</h2>
-  <p class="chapeau">Démonstration en direct avec des données fictives : survolez, cliquez sur un point, essayez « Colorier » ou « Groupes ».</p>
+  <p class="chapeau">Démonstration en direct avec des données fictives : survolez, cliquez sur un point, essayez « Colorier » ou « Groupes ». Pour découvrir les boutons un par un, lancez la visite guidée.</p>
+  <div class="boutons" style="margin:0 0 14px"><button class="btn primaire" id="lancer-visite" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/><circle cx="12" cy="12" r="10"/></svg>Visite guidée de la démonstration</button></div>
   <div class="demo">
-    <iframe src="index.html?demo" title="Démonstration de Carto-profs avec des données fictives" loading="lazy"></iframe>
+    <iframe id="demo" src="index.html?demo" title="Démonstration de Carto-profs avec des données fictives" loading="lazy"></iframe>
     <div class="legende-demo">Données entièrement inventées ; rien n’est enregistré.<a href="index.html?demo" target="_blank" rel="noopener" style="margin-left:auto">Ouvrir en plein écran</a></div>
   </div>
 </section>
@@ -155,6 +156,12 @@ footer { margin-top: 48px; padding: 24px 0 40px; border-top: 1px solid var(--lig
 </footer>
 <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
 <script>
+document.getElementById('lancer-visite').addEventListener('click', () => {
+  const f = document.getElementById('demo');
+  f.src = 'index.html?demo&visite=' + Date.now();   // recharge la démonstration en lançant la visite
+  f.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  f.focus();
+});
 document.getElementById('copier').addEventListener('click', async () => {
   const url = document.getElementById('url-widget').textContent.trim();
   try { await navigator.clipboard.writeText(url); }
