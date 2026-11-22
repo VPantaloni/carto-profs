@@ -93,8 +93,9 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
   (mails, « NOM Prénom », tableau avec titres) avec rapprochement automatique et validation des doutes (homonymes, noms
   approchés) ; membres hors table placés par leur UAI ; coloriage par groupes (camembert si plusieurs, « Hors groupe »
   en gris, masquable) ; CSV par groupe.
-- **Zones de remplacement** (UAI `037002ZK` : 6 chiffres + `Z` + lettre) : une bulle par zone dans son département,
-  près du bord donné par son nom (OUEST, EST, NORD, SUD, CENTRE, lu dans la colonne établissement) ; **contours des
+- **Zones de remplacement** (UAI `037002ZK` : 6 chiffres + `Z` + lettre) : une bulle par zone, rangée autour des
+  départements avec un trait de rappel vers sa zone (côté donné par son nom : OUEST, EST, NORD, SUD, lu dans la colonne
+  établissement ; sinon le bord le plus proche) ; case « Groupes de ZR » ; **contours des
   départements** ; bouton **Voir tous les points** sous la boussole.
 - **Tableau de bord** (département, type, catégorie), **liste** accessible au clavier, exports **PNG**, **CSV**,
   impression **A4**, **mode présentation**.

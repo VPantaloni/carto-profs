@@ -39,6 +39,11 @@
       const w = this.conteneur.clientWidth || 800, h = this.conteneur.clientHeight || 600;
       return { x: w / 2 + (lon - this.centre[0]) * 100, y: h / 2 - (lat - this.centre[1]) * 100 };
     }
+    unproject(p) {
+      const [x, y] = Array.isArray(p) ? p : [p.x, p.y];
+      const w = this.conteneur.clientWidth || 800, h = this.conteneur.clientHeight || 600;
+      return { lng: this.centre[0] + (x - w / 2) / 100, lat: this.centre[1] - (y - h / 2) / 100 };
+    }
     getCanvas() { return this.canvas; }
     getCanvasContainer() { return this.cc; }
     getZoom() { return this.zoom; }

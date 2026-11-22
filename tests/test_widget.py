@@ -457,7 +457,7 @@ def test_menu_aide_et_presentation(page_prete):
     page.locator("#b-aide").click()
     expect(page.get_by_role("menuitem", name="Visite guidée")).to_be_visible()
     page.get_by_role("menuitem", name="Quoi de neuf ?").click()
-    expect(page.locator("#modale")).to_contain_text("Version 1.3.0")
+    expect(page.locator("#modale")).to_contain_text("Version 1.3.1")
     page.keyboard.press("Escape")
     page.locator("#b-presentation").click()
     expect(page.locator("#barre")).to_be_hidden()
@@ -670,6 +670,16 @@ def test_zones_de_remplacement(navigateur, serveur):
     for u in ("037002ZK", "037003ZB"):
         assert x1 < e[u]["lon"] < x2 and y1 < e[u]["lat"] < y2
     assert e["037002ZK"]["lon"] < (x1 + x2) / 2 < e["037003ZB"]["lon"]
+    # bulles rangées hors des départements : Ouest à gauche, Est à droite, traits de rappel vers les zones
+    page.wait_for_function("window.cartoProfs.etat().departements && window.cartoProfs.etat().zr.length === 3")
+    page.evaluate("window.__carte.carte._emettre('moveend')")
+    zr = {z["uai"]: z for z in etat(page, "zr")}
+    gauche = min(d["bbox"][0] for c, d in deps.items() if c in ("18", "37", "41", "45"))
+    droite = max(d["bbox"][2] for c, d in deps.items() if c in ("18", "37", "41", "45"))
+    assert zr["037002ZK"]["cote"] == "O" and zr["037002ZK"]["lng"] < gauche
+    assert zr["037003ZB"]["cote"] == "E" and zr["037003ZB"]["lng"] > droite
+    traits = page.evaluate("window.__carte.carte.getSource('zr-traits').data.features.map(f => f.geometry.type)")
+    assert traits.count("LineString") == 3 and traits.count("Point") == 3
     # fiche : personnes de la ZR, pas d'itinéraire
     page.locator('.zr[data-uai="037002ZK"]').click()
     fiche = page.locator("#fiche")
@@ -682,6 +692,11 @@ def test_zones_de_remplacement(navigateur, serveur):
     assert codes == ["18", "37", "41", "45"]
     page.locator("#c-contours").uncheck()
     page.wait_for_function("window.__carte.carte.getSource('deps').data.features.length === 0")
+    # case « Groupes de ZR » : retire les bulles
+    page.locator("#c-zr").uncheck()
+    expect(page.locator(".zr")).to_have_count(0)
+    page.locator("#c-zr").check()
+    expect(page.locator(".zr")).to_have_count(3)
     # recadrer sur tous les points (ZR comprises)
     n = page.evaluate("window.__carte.appels.length")
     page.get_by_role("button", name="Voir tous les points").dispatch_event("click")   # le faux MapLibre ne range pas les contrôles
