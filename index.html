@@ -1,0 +1,2012 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carto-profs</title>
+<!-- Carto-profs — widget Grist (licence EUPL 1.2) — https://forge.apps.education.fr/widget/carto-profs -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.css">
+<script src="https://cdn.jsdelivr.net/npm/maplibre-gl@4.7.1/dist/maplibre-gl.js"></script>
+<script src="https://docs.getgrist.com/grist-plugin-api.js"></script>
+<style>
+:root {
+  --accent: #33c1e8; --accent-texte: #06303d; --accent-fonce: #0a6f8c; --accent-clair: #e8f8fd; --accent-bord: #9fdff2;
+  --fond: #f5f3ef; --panneau: #ffffff; --texte: #1f2937; --doux: #5b6370; --ligne: #e5e7eb; --survol: #f3f4f6;
+  --ombre: 0 2px 10px rgba(0,0,0,.12); --ombre-forte: 0 8px 28px rgba(0,0,0,.2); --anneau: #ffffff;
+  --alerte-fond: #fffbeb; --alerte-bord: #fcd34d; --alerte-texte: #92400e;
+  color-scheme: light;
+}
+:root[data-theme="sombre"] {
+  --accent-fonce: #7dd3ef; --accent-clair: #0c2f3a; --accent-bord: #1f6b80;
+  --fond: #1f2328; --panneau: #111827; --texte: #f3f4f6; --doux: #a1a9b5; --ligne: #374151; --survol: #1f2937;
+  --ombre: 0 2px 10px rgba(0,0,0,.45); --ombre-forte: 0 8px 28px rgba(0,0,0,.6); --anneau: #111827;
+  --alerte-fond: #3a2a0b; --alerte-bord: #a16207; --alerte-texte: #fcd34d;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { font: 13px/1.4 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); overflow: hidden; }
+button, input, select, textarea { font: inherit; color: inherit; }
+a { color: var(--accent-fonce); }
+.ic { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; vertical-align: -3px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+[hidden] { display: none !important; }
+
+#app { position: fixed; inset: 0; }
+#carte { position: absolute; inset: 0; }
+.sans-carte { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: var(--doux); }
+
+.btn { display: inline-flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--ligne); background: var(--panneau); cursor: pointer; white-space: nowrap; box-shadow: 0 1px 3px rgba(0,0,0,.06); text-decoration: none; color: var(--texte); }
+.btn:hover { background: var(--survol); }
+.btn.ico { padding: 0 9px; }
+.btn.primaire { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); font-weight: 600; }
+.btn.primaire:hover { filter: brightness(.95); background: var(--accent); }
+.btn.actif, .btn[aria-pressed="true"] { background: var(--accent-clair); border-color: var(--accent-bord); color: var(--accent-fonce); }
+.btn[disabled], .btn.inactif { opacity: .5; cursor: not-allowed; pointer-events: none; }
+.btn.petit { min-height: 30px; padding: 0 8px; font-size: 12px; }
+.btn.alerte { background: var(--alerte-fond); border-color: var(--alerte-bord); color: var(--alerte-texte); }
+.lien-btn { border: 0; background: none; padding: 0; color: var(--accent-fonce); cursor: pointer; text-decoration: underline; }
+
+.barre { position: absolute; left: 12px; top: 12px; right: 64px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; z-index: 5; pointer-events: none; }
+.barre > * { pointer-events: auto; }
+.ressort { flex: 1 1 0; pointer-events: none !important; }
+.groupe { display: flex; gap: 2px; padding: 2px; border-radius: 10px; background: var(--panneau); border: 1px solid var(--ligne); box-shadow: 0 1px 3px rgba(0,0,0,.06); }
+.groupe .btn { border: 0; box-shadow: none; background: transparent; }
+.groupe .btn:hover { background: var(--survol); }
+.recherche { position: relative; flex: 0 1 280px; min-width: 180px; }
+.champ-recherche { display: flex; align-items: center; gap: 6px; min-height: 36px; padding: 0 10px; border-radius: 8px; background: var(--panneau); border: 1px solid var(--ligne); box-shadow: 0 1px 3px rgba(0,0,0,.06); color: var(--doux); }
+.champ-recherche input { border: 0; outline: 0; background: transparent; width: 100%; color: var(--texte); }
+.resultats { position: absolute; left: 0; right: 0; top: 40px; max-height: 320px; overflow: auto; background: var(--panneau); border: 1px solid var(--ligne); border-radius: 10px; box-shadow: var(--ombre-forte); padding: 4px; }
+.resultats button { display: flex; gap: 8px; width: 100%; text-align: left; padding: 7px 8px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; align-items: center; }
+.resultats button[aria-selected="true"], .resultats button:hover { background: var(--accent-clair); }
+.resultats .sous { color: var(--doux); font-size: 12px; }
+.resultats .vide { padding: 8px; color: var(--doux); }
+
+.aide { position: absolute; right: 12px; top: 12px; width: 40px; height: 40px; border-radius: 50%; border: 0; background: var(--accent); color: var(--accent-texte); display: flex; align-items: center; justify-content: center; cursor: pointer; box-shadow: 0 2px 8px rgba(51,193,232,.45); z-index: 6; }
+.aide .ic { width: 22px; height: 22px; }
+.menu { position: absolute; right: 12px; top: 58px; min-width: 210px; background: var(--panneau); border: 1px solid var(--ligne); border-radius: 10px; box-shadow: var(--ombre-forte); padding: 4px; z-index: 20; }
+.menu button { display: flex; align-items: center; gap: 8px; width: 100%; padding: 9px 10px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; }
+.menu button:hover, .menu button:focus-visible { background: var(--accent-clair); }
+
+.panneau { position: absolute; background: var(--panneau); border: 1px solid var(--ligne); border-radius: 12px; box-shadow: var(--ombre); z-index: 4; }
+.legende { left: 12px; top: 64px; width: 250px; max-height: calc(100% - 130px); overflow: auto; padding: 10px 12px; }
+.leg-tete { display: flex; align-items: center; gap: 6px; }
+.leg-tete b { flex: 1; }
+.leg-corps { display: flex; flex-direction: column; gap: 2px; margin-top: 6px; }
+.legende.replie .leg-corps { display: none; }
+.leg-item { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 28px; padding: 0 4px; border: 0; border-radius: 6px; background: transparent; cursor: pointer; text-align: left; }
+.leg-item:hover { background: var(--survol); }
+.leg-item.masque { opacity: .45; text-decoration: line-through; }
+.pastille { width: 14px; height: 14px; border-radius: 50%; border: 2px solid var(--anneau); box-shadow: 0 0 0 1px rgba(0,0,0,.18); flex: none; }
+.leg-item .n { margin-left: auto; color: var(--doux); font-variant-numeric: tabular-nums; }
+.aide-texte { color: var(--doux); font-size: 12px; margin: 2px 0 4px; }
+.sep { height: 1px; background: var(--ligne); margin: 6px 0; border: 0; }
+.case { display: flex; align-items: center; gap: 8px; min-height: 28px; cursor: pointer; }
+.case input, input[type="radio"], input[type="checkbox"] { accent-color: var(--accent); }
+.puces { display: flex; flex-wrap: wrap; gap: 4px; padding-left: 24px; }
+.puce { padding: 3px 9px; border-radius: 999px; font-size: 12px; border: 1px solid var(--ligne); background: transparent; color: var(--doux); cursor: pointer; }
+.puce[aria-pressed="true"] { border-color: var(--accent-bord); background: var(--accent-clair); color: var(--accent-fonce); }
+.sous-fond { padding-left: 24px; display: flex; flex-direction: column; gap: 6px; margin-top: 4px; }
+.sous-fond select { max-width: 100%; }
+
+.fiche { right: 12px; top: 64px; width: 340px; max-height: calc(100% - 130px); overflow: auto; padding: 14px; box-shadow: var(--ombre-forte); display: flex; flex-direction: column; gap: 10px; }
+.fiche h2 { margin: 0; font-size: 15px; }
+.fiche .sous { color: var(--doux); font-size: 12px; margin-top: 2px; }
+.fiche .dist { color: var(--accent-fonce); font-size: 12px; font-weight: 600; margin-top: 2px; }
+.fiche-tete { display: flex; gap: 8px; align-items: flex-start; }
+.fiche-tete > div { flex: 1; min-width: 0; }
+.fermer { width: 32px; height: 32px; border: 0; border-radius: 8px; background: transparent; cursor: pointer; display: flex; align-items: center; justify-content: center; flex: none; }
+.fermer:hover { background: var(--survol); }
+.liens { display: flex; flex-wrap: wrap; gap: 6px; }
+.pers-tete { display: flex; align-items: center; gap: 8px; }
+.pers-tete label { display: flex; align-items: center; gap: 6px; font-size: 12px; font-weight: 600; color: var(--doux); text-transform: uppercase; letter-spacing: .04em; }
+.pers-tete .btn { margin-left: auto; }
+.pers { list-style: none; margin: 0; padding: 0; }
+.apercu h2 { margin: 0; font-size: 15px; }
+.apercu .sous { color: var(--doux); font-size: 12px; margin-top: 2px; }
+.apercu .dist { color: var(--accent-fonce); font-size: 12px; font-weight: 600; }
+.pers li { display: flex; align-items: center; gap: 8px; padding: 6px 0; border-top: 1px solid var(--ligne); }
+.pers li.trouve { background: var(--accent-clair); border-radius: 6px; }
+.pers .point { width: 10px; height: 10px; border-radius: 50%; flex: none; }
+.pers .txt { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.mini { width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; border-radius: 6px; border: 0; background: transparent; cursor: pointer; color: var(--accent-fonce); flex: none; }
+.mini:hover { background: var(--survol); }
+
+.statut { position: absolute; left: 12px; bottom: 12px; display: flex; flex-wrap: wrap; gap: 8px; align-items: center; z-index: 4; max-width: calc(100% - 120px); }
+.statut .info { padding: 6px 10px; border-radius: 8px; background: var(--panneau); border: 1px solid var(--ligne); }
+.barre-selection { position: absolute; left: 50%; bottom: 58px; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border-radius: 12px; background: var(--panneau); border: 1.5px solid var(--accent); box-shadow: var(--ombre-forte); z-index: 7; max-width: calc(100% - 24px); }
+.barre-selection .doux { color: var(--doux); }
+
+.pt { position: relative; padding: 0; border-radius: 50%; border: 2px solid var(--anneau); box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: pointer; }
+.pt:hover, .pt:focus-visible { transform: scale(1.15); z-index: 2; }
+.pt.actif { box-shadow: 0 0 0 3px var(--accent), 0 1px 3px rgba(0,0,0,.4); }
+.pt.choisi::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed var(--accent); }
+.badge { position: absolute; right: -10px; top: -10px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #1f2937; color: #fff; font: 700 11px/18px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; }
+.groupe-pt { display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 0; background: rgba(51,193,232,.25); cursor: pointer; padding: 0; }
+.groupe-pt span { display: flex; align-items: center; justify-content: center; width: calc(100% - 10px); height: calc(100% - 10px); border-radius: 50%; background: var(--accent); color: var(--accent-texte); font-weight: 700; }
+.etiquette-rayon { font-size: 11px; font-weight: 700; color: var(--accent-fonce); text-shadow: 0 0 3px var(--panneau), 0 0 3px var(--panneau); pointer-events: none; }
+.depart-pin { color: var(--accent-fonce); pointer-events: none; }
+.depart-pin .ic { width: 30px; height: 30px; fill: var(--accent-clair); }
+.maplibregl-popup.survol .maplibregl-popup-content { background: var(--panneau); color: var(--texte); border-radius: 8px; padding: 8px 10px; box-shadow: var(--ombre-forte); font: 13px/1.4 Inter, system-ui, sans-serif; }
+.maplibregl-popup.survol .maplibregl-popup-tip { border-top-color: var(--panneau); border-bottom-color: var(--panneau); }
+.survol .sous { color: var(--doux); font-size: 12px; }
+.rect-sel { position: absolute; border: 2px dashed var(--accent); background: rgba(51,193,232,.12); pointer-events: none; z-index: 3; }
+body.mode-selection #carte .maplibregl-canvas-container { cursor: crosshair; }
+body.mode-depart #carte .maplibregl-canvas-container { cursor: crosshair; }
+
+.popover { position: absolute; z-index: 15; width: 320px; max-width: calc(100% - 24px); max-height: calc(100% - 80px); overflow: auto; background: var(--panneau); border: 1px solid var(--ligne); border-radius: 12px; box-shadow: var(--ombre-forte); padding: 12px; display: flex; flex-direction: column; gap: 10px; }
+.popover h3, .modale h3 { margin: 0; font-size: 14px; }
+.champ { display: flex; flex-direction: column; gap: 4px; }
+.champ > span { font-weight: 600; }
+input[type="text"], input[type="search"]:not(#recherche), select, textarea { min-height: 34px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--ligne); background: var(--panneau); }
+textarea { resize: vertical; }
+.liste-cases { display: flex; flex-direction: column; max-height: 260px; overflow: auto; border: 1px solid var(--ligne); border-radius: 8px; }
+.liste-cases label { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; border-bottom: 1px solid var(--ligne); cursor: pointer; }
+.liste-cases label:last-child { border-bottom: 0; }
+.liste-cases .n { margin-left: auto; color: var(--doux); }
+.rangee { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.rangee.fin { justify-content: flex-end; }
+
+.modale-fond { position: absolute; inset: 0; background: rgba(15,23,42,.45); z-index: 30; display: flex; align-items: center; justify-content: center; padding: 12px; }
+.modale { width: 580px; max-width: 100%; max-height: 100%; overflow: auto; background: var(--panneau); border-radius: 14px; box-shadow: var(--ombre-forte); padding: 18px; display: flex; flex-direction: column; gap: 12px; }
+.modale.large { width: 860px; }
+.modale-tete { display: flex; align-items: center; gap: 10px; }
+.modale-tete .ico-titre { width: 34px; height: 34px; border-radius: 10px; background: var(--accent-clair); color: var(--accent-fonce); display: flex; align-items: center; justify-content: center; flex: none; }
+.modale-tete .ico-titre .ic { width: 20px; height: 20px; }
+.modale-tete > div:nth-child(2) { flex: 1; }
+.modale-tete h2 { margin: 0; font-size: 16px; }
+.modale-tete p { margin: 0; color: var(--doux); }
+.choix { display: flex; gap: 10px; align-items: flex-start; padding: 9px 12px; border-radius: 10px; border: 1.5px solid var(--ligne); cursor: pointer; }
+.choix:has(input:checked) { border-color: var(--accent); background: var(--accent-clair); }
+.choix input { margin-top: 3px; }
+.choix .sous { color: var(--doux); font-size: 12px; display: block; }
+.choix.desactive { opacity: .5; cursor: not-allowed; }
+.etiq { font-size: 11px; padding: 1px 6px; border-radius: 999px; background: var(--survol); color: var(--doux); font-weight: 400; }
+.grille2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 4px 16px; }
+.val-couleur { display: flex; align-items: center; gap: 8px; min-height: 32px; }
+.val-couleur input[type="color"] { width: 26px; height: 26px; padding: 0; border: 2px solid var(--anneau); border-radius: 50%; box-shadow: 0 0 0 1px var(--ligne); cursor: pointer; background: none; }
+.val-couleur input[type="color"]::-webkit-color-swatch-wrapper { padding: 0; }
+.val-couleur input[type="color"]::-webkit-color-swatch { border: 0; border-radius: 50%; }
+.val-couleur span { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.onglets { display: flex; gap: 4px; border-bottom: 1px solid var(--ligne); flex-wrap: wrap; }
+.onglets button { min-height: 38px; padding: 0 12px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--doux); cursor: pointer; }
+.onglets button[aria-selected="true"] { border-bottom-color: var(--accent); color: var(--accent-fonce); font-weight: 600; }
+.deux-col { display: flex; gap: 18px; flex-wrap: wrap; }
+.deux-col > :first-child { flex: 1 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.deux-col > :last-child { flex: 0 1 320px; min-width: 0; display: flex; flex-direction: column; gap: 10px; }
+.ordre label { gap: 6px; }
+.ordre .fleches { margin-left: auto; display: flex; }
+.ordre .fleches button { width: 26px; height: 26px; border: 0; background: transparent; border-radius: 5px; cursor: pointer; color: var(--doux); display: flex; align-items: center; justify-content: center; }
+.ordre .fleches button:hover { background: var(--survol); }
+.champs-insert { display: flex; flex-wrap: wrap; gap: 6px; }
+.apercu { padding: 12px; border-radius: 12px; border: 1px solid var(--ligne); box-shadow: var(--ombre); display: flex; flex-direction: column; gap: 8px; }
+.alerte { padding: 8px 10px; border-radius: 8px; background: var(--alerte-fond); border: 1px solid var(--alerte-bord); color: var(--alerte-texte); font-size: 12px; }
+.manquant { padding: 9px 12px; border-radius: 10px; background: var(--alerte-fond); border: 1px solid var(--alerte-bord); display: flex; flex-direction: column; gap: 4px; }
+.manquant .rangee code { font-weight: 700; }
+.manquant .aide-m { color: var(--alerte-texte); font-size: 12px; }
+.tab-col { width: 100%; border-collapse: collapse; }
+.tab-col td { padding: 6px 8px; border-bottom: 1px solid var(--ligne); }
+.tab-col td:first-child { font-weight: 600; width: 34%; }
+.tab-col td:last-child { color: var(--doux); font-size: 12px; width: 30%; }
+.tab-col select { width: 100%; }
+.adresses { display: flex; flex-wrap: wrap; gap: 6px; max-height: 96px; overflow: auto; }
+.adresses span { padding: 3px 8px; border-radius: 999px; background: var(--survol); font-size: 12px; }
+
+.tableau { position: absolute; inset: 0; background: var(--fond); z-index: 10; overflow: auto; }
+.tableau-int { max-width: 1240px; margin: 0 auto; padding: 12px 64px 24px 12px; display: flex; flex-direction: column; gap: 14px; }
+.tableau h1 { margin: 0; font-size: 18px; }
+.blocs { display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 14px; }
+.bloc { background: var(--panneau); border: 1px solid var(--ligne); border-radius: 12px; padding: 14px; display: flex; flex-direction: column; gap: 8px; }
+.bloc h2 { margin: 0; font-size: 14px; }
+.barre-h { display: flex; align-items: center; gap: 10px; }
+.barre-h .nom { width: 130px; flex: none; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.barre-h .piste { flex: 1; height: 14px; border-radius: 4px; background: var(--survol); overflow: hidden; }
+.barre-h .piste div { height: 100%; border-radius: 4px; }
+.barre-h .v { width: 36px; text-align: right; font-weight: 600; font-variant-numeric: tabular-nums; }
+.boite-tab { overflow-x: auto; }
+table.liste { width: 100%; border-collapse: collapse; min-width: 700px; }
+table.liste th, table.liste td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--ligne); }
+table.liste th { font-size: 12px; color: var(--doux); font-weight: 600; }
+table.liste th button { border: 0; background: none; color: inherit; font-weight: 600; cursor: pointer; padding: 0; display: inline-flex; gap: 4px; align-items: center; }
+table.liste .nom-etab { border: 0; background: none; padding: 0; color: var(--accent-fonce); text-decoration: underline; cursor: pointer; text-align: left; }
+
+.visite-halo { position: absolute; border-radius: 10px; box-shadow: 0 0 0 9999px rgba(15,23,42,.45); border: 2px solid var(--accent); z-index: 40; pointer-events: none; transition: all .2s; }
+.visite { position: absolute; z-index: 41; width: 300px; background: var(--panneau); border-radius: 12px; box-shadow: var(--ombre-forte); padding: 14px; display: flex; flex-direction: column; gap: 8px; border: 1px solid var(--ligne); }
+.visite h3 { margin: 0; font-size: 14px; }
+.visite p { margin: 0; }
+.visite .etape { color: var(--doux); font-size: 12px; }
+.toast { position: absolute; left: 50%; bottom: 108px; transform: translateX(-50%); z-index: 50; background: #1f2937; color: #fff; padding: 9px 14px; border-radius: 10px; box-shadow: var(--ombre-forte); max-width: calc(100% - 24px); }
+.bandeau-demo { position: absolute; left: 50%; top: 56px; transform: translateX(-50%); z-index: 4; padding: 6px 12px; border-radius: 999px; background: var(--accent-clair); border: 1px solid var(--accent-bord); color: var(--accent-fonce); font-size: 12px; white-space: nowrap; max-width: calc(100% - 24px); overflow: hidden; text-overflow: ellipsis; }
+#quitter-presentation { position: absolute; right: 12px; top: 12px; z-index: 8; }
+body.presentation .barre, body.presentation .aide, body.presentation .statut, body.presentation .barre-selection, body.presentation .bandeau-demo, body.presentation .maplibregl-ctrl-bottom-right { display: none !important; }
+body.presentation .legende { top: 12px; }
+.impression { display: none; }
+
+@media (max-width: 700px) {
+  .lib { display: none; }
+  .barre { right: 60px; }
+  .recherche { flex: 1 1 100%; }
+  .legende { width: 200px; top: 112px; }
+  .fiche { left: 8px; right: 8px; top: auto; bottom: 8px; width: auto; max-height: 55%; }
+  .statut { bottom: 8px; }
+  body.fiche-ouverte .statut, body.fiche-ouverte .barre-selection { display: none !important; }
+  .bandeau-demo { display: none; }
+}
+@media print {
+  @page { size: A4 landscape; margin: 10mm; }
+  body { overflow: visible; background: #fff; }
+  #app { position: static; }
+  .barre, .aide, .statut, .barre-selection, .fiche, .popover, .menu, .toast, .bandeau-demo, .maplibregl-ctrl, .visite, .visite-halo, #quitter-presentation, .tableau { display: none !important; }
+  .impression { display: block; font-size: 14px; margin-bottom: 4mm; }
+  .impression h1 { margin: 0 0 2mm; font-size: 18px; }
+  #carte { position: relative; width: 277mm; height: 165mm; }
+  .legende { position: absolute; top: 18mm; left: 4mm; box-shadow: none; max-height: none; }
+  .legende .sep, .legende .case, .legende .puces, .legende .sous-fond, .legende .aide-texte, .legende .leg-tete button { display: none !important; }
+}
+</style>
+</head>
+<body>
+<div id="app">
+  <div id="carte" role="region" aria-label="Carte des établissements"></div>
+
+  <div class="impression" id="impression"></div>
+
+  <div class="barre" id="barre">
+    <div class="recherche" id="zone-recherche">
+      <label class="champ-recherche"><i data-ic="search"></i><span class="sr">Rechercher</span>
+        <input id="recherche" type="search" placeholder="Personne, établissement, commune…" autocomplete="off" role="combobox" aria-controls="resultats" aria-expanded="false" aria-autocomplete="list">
+      </label>
+      <div id="resultats" class="resultats" role="listbox" aria-label="Résultats" hidden></div>
+    </div>
+    <button class="btn" id="b-couleurs" title="Choisir la colonne qui donne la couleur des points"><i data-ic="palette"></i><span class="lib">Colorier : <b id="lib-couleur">—</b></span></button>
+    <button class="btn" id="b-bulles" title="Choisir ce que montrent les bulles"><i data-ic="message"></i><span class="lib">Bulles</span></button>
+    <button class="btn" id="b-filtre" title="Ne montrer qu’une partie des personnes"><i data-ic="funnel"></i><span class="lib" id="lib-filtre">Filtrer</span></button>
+    <button class="btn" id="b-depart" title="Point de départ : distances et cercles de rayon"><i data-ic="crosshair"></i><span class="lib" id="lib-depart">Départ</span></button>
+    <button class="btn" id="b-selection" aria-pressed="false" title="Entourer des établissements sur la carte pour les ajouter à la sélection"><i data-ic="lasso"></i><span class="lib">Sélectionner</span></button>
+    <span class="ressort"></span>
+    <div class="groupe" id="groupe-vues" role="group" aria-label="Vues et exports">
+      <button class="btn ico" id="b-tableau" aria-label="Tableau de bord" title="Tableau de bord"><i data-ic="chart"></i></button>
+      <button class="btn ico" id="b-liste" aria-label="Liste des établissements" title="Liste des établissements (accessible au clavier)"><i data-ic="list"></i></button>
+      <button class="btn ico" id="b-export" aria-label="Exporter" title="Exporter : image, CSV, impression"><i data-ic="file-down"></i></button>
+      <button class="btn ico" id="b-presentation" aria-label="Mode présentation" title="Mode présentation (plein écran, sans menus)"><i data-ic="maximize"></i></button>
+      <button class="btn ico" id="b-colonnes" aria-label="Colonnes et UAI" title="Colonnes utilisées et UAI introuvables"><i data-ic="columns"></i></button>
+      <button class="btn ico" id="b-theme" aria-label="Thème" title="Thème"><i data-ic="contrast"></i></button>
+    </div>
+  </div>
+
+  <button class="aide" id="b-aide" aria-label="Aide" aria-haspopup="menu" aria-expanded="false" title="Aide"><i data-ic="help"></i></button>
+  <div class="menu" id="menu-aide" role="menu" hidden>
+    <button role="menuitem" data-aide="visite"><i data-ic="compass"></i>Visite guidée</button>
+    <button role="menuitem" data-aide="tuto"><i data-ic="book"></i>Aide (tutoriel)</button>
+    <button role="menuitem" data-aide="neuf"><i data-ic="sparkles"></i>Quoi de neuf ?</button>
+  </div>
+
+  <aside class="panneau legende" id="legende" aria-label="Légende"></aside>
+  <aside class="panneau fiche" id="fiche" aria-label="Fiche de l’établissement" hidden></aside>
+  <div class="statut" id="statut"></div>
+  <div class="barre-selection" id="barre-selection" role="region" aria-label="Sélection" hidden></div>
+  <div class="bandeau-demo" id="bandeau-demo" hidden>Démonstration avec des données fictives : ajoutez ce widget dans Grist pour voir vos données.</div>
+  <div class="popover" id="pop" hidden></div>
+  <section class="tableau" id="tableau" aria-label="Tableau de bord" hidden></section>
+  <div class="modale-fond" id="modale-fond" hidden><div class="modale" id="modale" role="dialog" aria-modal="true" aria-labelledby="modale-titre"></div></div>
+  <div class="visite-halo" id="visite-halo" hidden></div>
+  <div class="visite" id="visite" role="dialog" aria-labelledby="visite-titre" hidden></div>
+  <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <button class="btn" id="quitter-presentation" hidden><i data-ic="x"></i>Quitter la présentation</button>
+</div>
+
+<script type="module">
+// ============================================================================================================
+// Carto-profs — carte des personnes d'une table Grist, placées par l'UAI de leur établissement (open data).
+// Un seul fichier, sans étape de construction. Icônes : Lucide (https://lucide.dev, licence ISC).
+// ============================================================================================================
+const VERSION = '1.0.0';
+const NOUVEAUTES = [
+  { version: '1.0.0', date: 'novembre 2026', points: [
+    'Première version : carte des personnes par établissement, coordonnées retrouvées en open data à partir de l’UAI.',
+    'Assistants « Colorier selon… » et « Bulles », légende cliquable, points en camembert, regroupement.',
+    'Recherche, filtre, point de départ et cercles de rayon, sélection et envoi de mails.',
+    'Tableau de bord, liste accessible au clavier, exports PNG / CSV, impression A4, mode présentation.'
+  ] }
+];
+const API_GEO = 'https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-adresse-et-geolocalisation-etablissements-premier-et-second-degre';
+const API_ANNU = 'https://data.education.gouv.fr/api/explore/v2.1/catalog/datasets/fr-en-annuaire-education';
+const API_BAN = 'https://data.geopf.fr/geocodage/search';
+const STYLES = { clair: 'https://tiles.openfreemap.org/styles/positron', sombre: 'https://tiles.openfreemap.org/styles/dark' };
+const PREFIXE = 'carto-profs:';
+const JOUR = 864e5, DUREE_CACHE = 30 * JOUR, DUREE_ABSENT = 7 * JOUR;
+const PAQUET = 50, LOT_MAIL = 40;
+const SANS = '#9ca3af';
+const PALETTES = {
+  lisible: { nom: 'Lisible clair / sombre', c: ['#2563eb', '#ea580c', '#0d9488', '#7c3aed', '#ca8a04', '#db2777', '#65a30d', '#0891b2', '#9333ea', '#dc2626', '#4b5563', '#a16207', '#059669', '#c026d3', '#1d4ed8'] },
+  pastel: { nom: 'Pastel', c: ['#7aa6f0', '#f4a261', '#6cc4b8', '#b79cf0', '#e9c46a', '#f28fb5', '#a3c76a', '#78c6dc', '#c9a0dc', '#ef8a8a', '#9aa5b1', '#d4b483'] },
+  daltonisme: { nom: 'Daltonisme', c: ['#0072B2', '#E69F00', '#009E73', '#CC79A7', '#56B4E9', '#D55E00', '#F0E442', '#000000'] }
+};
+const DEGRADE = ['#a5d8f0', '#5bb6e0', '#2b8cc4', '#1c5f99', '#13306b'];
+const TYPES = { ECOLE: 'École', CLG: 'Collège', LGT: 'Lycée général et technologique', LP: 'Lycée professionnel', LPO: 'Lycée polyvalent', EREA: 'EREA', AUTRE: 'Autre' };
+const TYPES_FOND = [['ECOLE', 'Écoles'], ['CLG', 'CLG'], ['LYC', 'LYC'], ['EREA', 'EREA'], ['AUTRE', 'Autres']];
+const ACADEMIES = ['Aix-Marseille', 'Amiens', 'Besançon', 'Bordeaux', 'Clermont-Ferrand', 'Corse', 'Créteil', 'Dijon', 'Grenoble', 'Guadeloupe', 'Guyane', 'La Réunion', 'Lille', 'Limoges', 'Lyon', 'Martinique', 'Mayotte', 'Montpellier', 'Nancy-Metz', 'Nantes', 'Nice', 'Normandie', 'Orléans-Tours', 'Paris', 'Poitiers', 'Reims', 'Rennes', 'Strasbourg', 'Toulouse', 'Versailles'];
+const COLONNES_GRIST = [
+  { name: 'UAI', title: 'UAI (RNE) de l’établissement', optional: true, description: '7 chiffres et 1 lettre, par exemple 0451234A. Obligatoire pour placer les points.' },
+  { name: 'Nom', title: 'Nom', optional: true },
+  { name: 'Prenom', title: 'Prénom', optional: true },
+  { name: 'Mail', title: 'Adresse mail', optional: true },
+  { name: 'Libelle', title: 'Libellé (texte libre)', optional: true },
+  { name: 'Groupe', title: 'Groupe (couleur des points)', optional: true },
+  { name: 'Couleur', title: 'Couleur #rrggbb', optional: true },
+  { name: 'Etablissement', title: 'Nom de l’établissement (secours)', optional: true },
+  { name: 'Commune', title: 'Commune (secours)', optional: true },
+  { name: 'Latitude', title: 'Latitude (facultatif)', optional: true },
+  { name: 'Longitude', title: 'Longitude (facultatif)', optional: true }
+];
+const ROLES = { UAI: 'UAI (obligatoire)', Nom: 'Nom', Prenom: 'Prénom', Mail: 'Mail', Libelle: 'Libellé', Groupe: 'Groupe', Couleur: 'Couleur (#rrggbb)', Etablissement: 'Établissement (secours)', Commune: 'Commune (secours)', Latitude: 'Latitude', Longitude: 'Longitude' };
+
+// Icônes Lucide (contenu des balises <svg>)
+const IC = {
+  search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+  palette: '<circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/>',
+  message: '<path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>',
+  funnel: '<path d="M10 20a1 1 0 0 0 .553.895l2 1A1 1 0 0 0 14 21v-7a2 2 0 0 1 .517-1.341L21.74 4.67A1 1 0 0 0 21 3H3a1 1 0 0 0-.742 1.67l7.225 7.989A2 2 0 0 1 10 14z"/>',
+  crosshair: '<circle cx="12" cy="12" r="10"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/>',
+  lasso: '<path d="M7 22a5 5 0 0 1-2-4"/><path d="M3.3 14A6.8 6.8 0 0 1 2 10c0-4.4 4.5-8 10-8s10 3.6 10 8-4.5 8-10 8a12 12 0 0 1-5-1"/><circle cx="5" cy="16" r="2"/>',
+  chart: '<path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/>',
+  list: '<path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/>',
+  'file-down': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/>',
+  maximize: '<path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/>',
+  columns: '<rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/>',
+  contrast: '<circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/>',
+  sun: '<circle cx="12" cy="12" r="4"/><path d="M12 2v2"/><path d="M12 20v2"/><path d="m4.93 4.93 1.41 1.41"/><path d="m17.66 17.66 1.41 1.41"/><path d="M2 12h2"/><path d="M20 12h2"/><path d="m6.34 17.66-1.41 1.41"/><path d="m19.07 4.93-1.41 1.41"/>',
+  moon: '<path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>',
+  help: '<circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/>',
+  compass: '<path d="m16.24 7.76-1.804 5.411a2 2 0 0 1-1.265 1.265L7.76 16.24l1.804-5.411a2 2 0 0 1 1.265-1.265z"/><circle cx="12" cy="12" r="10"/>',
+  book: '<path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/>',
+  sparkles: '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .963 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.963 0z"/>',
+  x: '<path d="M18 6 6 18"/><path d="m6 6 12 12"/>',
+  mail: '<rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/>',
+  send: '<path d="M14.536 21.686a.5.5 0 0 0 .937-.024l6.5-19a.496.496 0 0 0-.635-.635l-19 6.5a.5.5 0 0 0-.024.937l7.93 3.18a2 2 0 0 1 1.112 1.11z"/><path d="m21.854 2.147-10.94 10.939"/>',
+  route: '<circle cx="6" cy="19" r="3"/><path d="M9 19h8.5a3.5 3.5 0 0 0 0-7h-11a3.5 3.5 0 0 1 0-7H15"/><circle cx="18" cy="5" r="3"/>',
+  external: '<path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h3"/>',
+  pen: '<path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a1 1 0 0 1 3 3l-9.013 9.014a2 2 0 0 1-.853.505l-2.873.84a.5.5 0 0 1-.62-.62l.84-2.873a2 2 0 0 1 .506-.852z"/>',
+  copy: '<rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>',
+  alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"/><path d="M12 9v4"/><path d="M12 17h.01"/>',
+  pin: '<path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+  up: '<path d="m18 15-6-6-6 6"/>',
+  down: '<path d="m6 9 6 6 6-6"/>',
+  back: '<path d="m12 19-7-7 7-7"/><path d="M19 12H5"/>',
+  printer: '<path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 9V3a1 1 0 0 1 1-1h10a1 1 0 0 1 1 1v6"/><rect x="6" y="14" width="12" height="8" rx="1"/>',
+  image: '<rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/>',
+  plus: '<path d="M5 12h14"/><path d="M12 5v14"/>',
+  refresh: '<path d="M21 12a9 9 0 1 1-9-9c2.52 0 4.93 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/>',
+  sort: '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>'
+};
+const ic = (nom, style = '') => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"${style ? ` style="${style}"` : ''}>${IC[nom] || ''}</svg>`;
+const $ = id => document.getElementById(id);
+const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+const sansAccents = s => String(s ?? '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const pluriel = (n, un, plusieurs) => `${n} ${n > 1 ? plusieurs : un}`;
+const local = {
+  lire(k, d) { try { const v = localStorage.getItem(PREFIXE + k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } },
+  ecrire(k, v) { try { localStorage.setItem(PREFIXE + k, JSON.stringify(v)); return true; } catch (e) { return false; } },
+  oublier(k) { try { localStorage.removeItem(PREFIXE + k); } catch (e) { /* stockage indisponible */ } }
+};
+
+// ------------------------------------------------------------------------------------------------ état
+const DANS_GRIST = typeof grist !== 'undefined' && (window.self !== window.top || window.__FAUX_GRIST__ === true);
+function reglagesParDefaut() {
+  return {
+    version: 1, configure: false, colonnes: {},
+    couleur: { source: 'categorie', col: null, palette: 'lisible', valeurs: {}, mode: 'camembert' },
+    bulles: { survol: { commune: true, nombre: true, type: false }, modele: '', colonnes: null, mailParPersonne: true, lienGrist: true, tri: null },
+    fond: { actif: false, academie: null, types: ['CLG', 'LYC', 'EREA'], secteurs: ['Public', 'Privé'] },
+    regrouper: true
+  };
+}
+function fusion(base, plus) {
+  if (!plus || typeof plus !== 'object') return base;
+  for (const [k, v] of Object.entries(plus)) {
+    if (v && typeof v === 'object' && !Array.isArray(v) && base[k] && typeof base[k] === 'object' && !Array.isArray(base[k])) fusion(base[k], v);
+    else base[k] = v;
+  }
+  return base;
+}
+let reglages = reglagesParDefaut();
+let lignes = [], mappings = null, colonnesTable = [], devinees = {}, raisons = {};
+let acces = null, nomTable = '';
+let personnes = [], visibles = [], etabs = [], parUai = new Map(), introuvables = [], sansUai = [];
+let categories = [], infoCouleur = null;
+const masquees = new Set();
+let filtre = null;                    // { col, garder: Set }
+const selection = new Set();          // id des lignes Grist
+let geo = local.lire('geo', {});      // UAI → { d: données | null, t: date }
+let annu = local.lire('annuaire', {});
+let depart = local.lire('depart', null);
+let theme = local.lire('theme', 'auto');
+let fondDonnees = null, listeAcademies = null;
+let ficheUai = null, ficheTrouve = null;
+let map = null, cadreFait = false, geoEnCours = false, erreurGeo = '';
+let recuOptions = false, recuLignes = false, demarre = false, avertiLecture = false;
+
+// ------------------------------------------------------------------------------------------------ valeurs
+function texte(v) {
+  if (v == null) return '';
+  if (Array.isArray(v)) return (v[0] === 'L' ? v.slice(1) : v).map(texte).join(', ');
+  if (v instanceof Date) return isNaN(v) ? '' : v.toLocaleDateString('fr-FR');
+  if (typeof v === 'boolean') return v ? 'oui' : 'non';
+  if (typeof v === 'number') return Number.isInteger(v) ? String(v) : v.toLocaleString('fr-FR', { maximumFractionDigits: 2 });
+  if (typeof v === 'object') return '';
+  return String(v).trim();
+}
+function nombre(v) {
+  if (typeof v === 'number') return isFinite(v) ? v : null;
+  if (typeof v === 'string' && v.trim()) { const n = Number(v.replace(',', '.').trim()); return isFinite(n) ? n : null; }
+  return null;
+}
+const RE_UAI = /^\d{7}[A-Z]$/;
+const normUai = v => texte(v).toUpperCase().replace(/\s+/g, '');
+const RE_HEX = /^#[0-9a-f]{6}$/i;
+const estMail = s => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(s);
+
+function typeEtab(nature) {
+  const n = +nature;
+  if (n >= 100 && n < 200) return 'ECOLE';
+  if (n === 340) return 'CLG';
+  if (n === 320) return 'LP';
+  if (n === 306) return 'LPO';
+  if (n >= 300 && n < 310) return 'LGT';
+  if (n === 370) return 'EREA';
+  return 'AUTRE';
+}
+const groupeType = n => { const t = typeEtab(n); return ['LGT', 'LP', 'LPO'].includes(t) ? 'LYC' : t; };
+const secteurDe = s => sansAccents(s).startsWith('priv') ? 'Privé' : 'Public';
+function domaineAcademie(aca) {
+  const s = sansAccents(aca).replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+  if (s === 'clermont-ferrand') return 'ac-clermont.fr';
+  if (s === 'la-reunion') return 'ac-reunion.fr';
+  return s ? `ac-${s}.fr` : '';
+}
+function distanceKm(a, b) {
+  const R = 6371, r = x => x * Math.PI / 180;
+  const dLat = r(b.lat - a.lat), dLon = r(b.lon - a.lon);
+  const h = Math.sin(dLat / 2) ** 2 + Math.cos(r(a.lat)) * Math.cos(r(b.lat)) * Math.sin(dLon / 2) ** 2;
+  return 2 * R * Math.asin(Math.sqrt(h));
+}
+const fmtKm = d => d < 10 ? d.toLocaleString('fr-FR', { maximumFractionDigits: 1 }) + ' km' : Math.round(d) + ' km';
+
+// ------------------------------------------------------------------------------------------------ colonnes
+function colonnesDe(recs) {
+  const s = new Set();
+  for (const r of recs.slice(0, 50)) for (const k of Object.keys(r)) if (k !== 'id' && k !== 'manualSort' && !k.startsWith('gristHelper')) s.add(k);
+  return [...s];
+}
+function deviner(recs, cols) {
+  const ech = recs.slice(0, 400), res = {}, pourquoi = {};
+  const part = (c, test) => { let n = 0, t = 0; for (const r of ech) { const v = r[c]; if (v == null || v === '') continue; t++; if (test(v)) n++; } return t ? n / t : 0; };
+  const cle = c => sansAccents(c).replace(/[\s-]+/g, '_');
+  const regles = [
+    ['UAI', /^(uai|rne|code_?uai|code_?rne|numero_?uai|n_?uai|uai_?etab\w*|rne_?etab\w*|etab_?(uai|rne))$/, v => RE_UAI.test(normUai(v)), 'des valeurs au format UAI'],
+    ['Nom', /^(nom|nom_?usage|nom_?d_?usage|nom_?de_?famille|nom_?famille|last_?name|nom_?prof\w*)$/],
+    ['Prenom', /^(prenom|prenom_?usuel|first_?name|prenom_?prof\w*)$/],
+    ['Mail', /(mail|courriel)/, v => estMail(texte(v)), 'contient des « @ »'],
+    ['Etablissement', /^(etabnom|nom_?etab\w*|etablissement|etab|appellation\w*|lieu)$/],
+    ['Commune', /^(etabville|ville|commune|localite|libelle_?commune|ville_?etab\w*)$/],
+    ['Couleur', /^(couleur|color|colour)$/, v => RE_HEX.test(texte(v)), 'valeurs #rrggbb'],
+    ['Groupe', /^(groupe|group|categorie_?perso\w*)$/],
+    ['Libelle', /^(libelle|label|etiquette)$/],
+    ['Latitude', /^(lat|latitude)$/, v => nombre(v) != null, 'nombres', true],
+    ['Longitude', /^(lon|lng|long|longitude)$/, v => nombre(v) != null, 'nombres', true],
+    ['Type', /^(etabcategorie|type_?etab\w*|nature_?etab\w*|categorie_?etab\w*)$/],
+    ['Departement', /^(etabdepartement|departement|dept?|departement_?etab\w*)$/]
+  ];
+  for (const [role, reNom, test, lib, nomObligatoire] of regles) {
+    let meilleur = null, score = 0, raison = '';
+    for (const c of cols) {
+      const parNom = reNom.test(cle(c));
+      if (nomObligatoire && !parNom) continue;
+      let s = parNom ? 1 : 0, p = 0;
+      if (test) { p = part(c, test); s = (parNom ? .5 : 0) + p; if (p < .3) s = 0; }
+      if (s > score && s >= .6) { score = s; meilleur = c; raison = test && p >= .6 ? `${Math.round(p * 100)} % ${lib}` : 'nom de la colonne'; }
+    }
+    if (meilleur) { res[role] = meilleur; pourquoi[role] = raison; }
+  }
+  return { res, pourquoi };
+}
+function col(role) {
+  const m = mappings && mappings[role];
+  if (m) return m;
+  const r = reglages.colonnes && reglages.colonnes[role];
+  if (r === '') return null;              // « aucune » choisi dans l’assistant
+  if (r && colonnesTable.includes(r)) return r;
+  return devinees[role] || null;
+}
+const origineCol = role => (mappings && mappings[role]) ? 'panneau de Grist' : (reglages.colonnes && reglages.colonnes[role]) ? 'choisie' : (raisons[role] || '');
+
+// ------------------------------------------------------------------------------------------------ catégories (couleurs)
+function analyserColonne(c, recs = lignes) {
+  const vals = [];
+  for (const r of recs) { const v = r[c]; if (v == null || v === '' || (Array.isArray(v) && v.filter(x => x !== 'L').length === 0)) continue; vals.push(v); }
+  const info = { col: c, total: recs.length, remplis: vals.length };
+  if (!vals.length) return { ...info, genre: 'vide', type: 'texte', valeurs: [], bon: false };
+  const estNb = vals.every(v => typeof v === 'number'), estDate = vals.every(v => v instanceof Date), estBool = vals.every(v => typeof v === 'boolean');
+  const comptes = new Map();
+  for (const v of vals) { const k = texte(v); comptes.set(k, (comptes.get(k) || 0) + 1); }
+  const distinct = comptes.size;
+  if ((estNb || estDate) && distinct > 6) {
+    const xs = vals.map(v => estDate ? v.getTime() : v);
+    return { ...info, genre: estDate ? 'date' : 'nombre', type: 'nombre', date: estDate, min: Math.min(...xs), max: Math.max(...xs), distinct, bon: true };
+  }
+  const valeurs = [...comptes.entries()].sort((a, b) => b[1] - a[1]);
+  const genre = estBool ? 'case à cocher' : estNb ? 'nombre' : estDate ? 'date' : vals.some(Array.isArray) ? 'liste' : 'texte';
+  const bon = distinct >= 2 && distinct <= 15 && (distinct <= 6 || distinct / vals.length <= .5);
+  return { ...info, genre, type: 'texte', valeurs, distinct, bon };
+}
+function bornes(info) {
+  const k = DEGRADE.length, pas = (info.max - info.min) / k || 1;
+  const fmt = x => info.date ? String(new Date(x).getFullYear()) : (Math.round(x * 10) / 10).toLocaleString('fr-FR');
+  return Array.from({ length: k }, (_, i) => ({ de: info.min + i * pas, a: i === k - 1 ? info.max : info.min + (i + 1) * pas, lib: `${fmt(info.min + i * pas)} – ${fmt(i === k - 1 ? info.max : info.min + (i + 1) * pas)}` }));
+}
+function colonneCouleurActive() {
+  const cc = reglages.couleur;
+  if (cc.source === 'aucune') return null;
+  if (cc.source === 'colonne') return col('Couleur');
+  const c = cc.col && colonnesTable.includes(cc.col) ? cc.col : col('Groupe');
+  return c || null;
+}
+function preparerCategories() {
+  const cc = reglages.couleur, c = colonneCouleurActive();
+  const cat = new Map(), ordre = [];
+  infoCouleur = null;
+  if (cc.source === 'colonne' && c) {
+    for (const p of personnes) { const h = texte(p.rec[c]); cat.set(p.id, RE_HEX.test(h) ? h.toLowerCase() : 'Sans couleur'); }
+  } else if (c) {
+    infoCouleur = analyserColonne(c);
+    if (infoCouleur.type === 'nombre') {
+      const bs = bornes(infoCouleur);
+      bs.forEach(b => ordre.push(b.lib));
+      for (const p of personnes) {
+        const v = p.rec[c]; const x = v instanceof Date ? v.getTime() : nombre(v);
+        if (x == null) { cat.set(p.id, 'Sans valeur'); continue; }
+        let i = bs.findIndex(b => x <= b.a); if (i < 0) i = bs.length - 1;
+        cat.set(p.id, bs[i].lib);
+      }
+    } else for (const p of personnes) cat.set(p.id, texte(p.rec[c]) || 'Sans valeur');
+  } else for (const p of personnes) cat.set(p.id, 'Toutes les personnes');
+  for (const p of personnes) p.cat = cat.get(p.id);
+  // comptes sur les personnes filtrées (avant masquage par la légende)
+  const comptes = new Map();
+  for (const p of personnes) if (passeFiltre(p)) comptes.set(p.cat, (comptes.get(p.cat) || 0) + 1);
+  let cles = [...comptes.keys()];
+  if (ordre.length) cles.sort((a, b) => (ordre.indexOf(a) + 1 || 99) - (ordre.indexOf(b) + 1 || 99));
+  else cles.sort((a, b) => (a === 'Sans valeur' || a === 'Sans couleur') - (b === 'Sans valeur' || b === 'Sans couleur') || comptes.get(b) - comptes.get(a) || a.localeCompare(b, 'fr'));
+  const pal = (PALETTES[cc.palette] || PALETTES.lisible).c;
+  let i = 0;
+  categories = cles.map(k => {
+    let couleur;
+    if (k === 'Sans valeur' || k === 'Sans couleur') couleur = SANS;
+    else if (cc.source === 'colonne') couleur = k;
+    else if (cc.valeurs && cc.valeurs[k]) couleur = cc.valeurs[k];
+    else if (ordre.length) couleur = DEGRADE[Math.max(0, ordre.indexOf(k))];
+    else if (k === 'Toutes les personnes') couleur = '#2563eb';
+    else couleur = pal[i++ % pal.length];
+    return { cle: k, lib: k, couleur, n: comptes.get(k) };
+  });
+}
+const couleurCat = k => (categories.find(c => c.cle === k) || {}).couleur || SANS;
+
+// ------------------------------------------------------------------------------------------------ données → établissements
+function passeFiltre(p) { return !filtre || filtre.garder.has(texte(p.rec[filtre.col]) || 'Sans valeur'); }
+function infoEtab(uai, recs) {
+  const g = geo[uai] && geo[uai].d;
+  const cE = col('Etablissement'), cC = col('Commune'), cT = col('Type'), cD = col('Departement');
+  const r0 = recs[0] || {};
+  return {
+    nom: (g && g.nom) || (cE && texte(r0[cE])) || `Établissement ${uai}`,
+    commune: (g && g.commune) || (cC && texte(r0[cC])) || '',
+    type: g ? typeEtab(g.nature) : '',
+    typeLib: g ? (TYPES[typeEtab(g.nature)] === 'Autre' ? (g.natureLib || 'Autre') : TYPES[typeEtab(g.nature)]) : (cT && texte(r0[cT])) || '',
+    secteur: g ? secteurDe(g.secteur) : '',
+    dep: (g && g.dep) || (cD && texte(r0[cD])) || (/^\d{3}/.test(uai) ? `Département ${uai.slice(0, 3)}` : ''),
+    academie: (g && g.academie) || '',
+    adresse: g ? [g.adresse, [g.cp, g.commune].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '',
+    open: !!g
+  };
+}
+function coordonnees(uai, recs) {
+  const cLa = col('Latitude'), cLo = col('Longitude');
+  if (cLa && cLo) for (const r of recs) {
+    const la = nombre(r[cLa]), lo = nombre(r[cLo]);
+    if (la != null && lo != null && Math.abs(la) <= 90 && Math.abs(lo) <= 180 && (la || lo)) return { lat: la, lon: lo };
+  }
+  const g = geo[uai] && geo[uai].d;
+  return g && g.lat != null ? { lat: g.lat, lon: g.lon } : null;
+}
+function recalculer() {
+  colonnesTable = colonnesDe(lignes);
+  const d = deviner(lignes, colonnesTable); devinees = d.res; raisons = d.pourquoi;
+  const cU = col('UAI');
+  personnes = lignes.map(r => ({ id: r.id, rec: r, uai: cU ? normUai(r[cU]) : '' }));
+  if (filtre && !colonnesTable.includes(filtre.col)) filtre = null;
+  preparerCategories();
+  // regroupement par UAI (personnes filtrées et non masquées)
+  visibles = personnes.filter(p => p.uai && passeFiltre(p) && !masquees.has(p.cat));
+  sansUai = personnes.filter(p => !p.uai);
+  const groupes = new Map();
+  for (const p of visibles) { if (!groupes.has(p.uai)) groupes.set(p.uai, []); groupes.get(p.uai).push(p); }
+  etabs = []; introuvables = []; parUai = new Map();
+  const triCol = reglages.bulles.tri && colonnesTable.includes(reglages.bulles.tri) ? reglages.bulles.tri : col('Nom');
+  for (const [uai, ps] of groupes) {
+    if (triCol) ps.sort((a, b) => texte(a.rec[triCol]).localeCompare(texte(b.rec[triCol]), 'fr'));
+    const xy = coordonnees(uai, ps.map(p => p.rec));
+    const e = { uai, pers: ps, n: ps.length, ...infoEtab(uai, ps.map(p => p.rec)), lat: xy && xy.lat, lon: xy && xy.lon };
+    const cpt = new Map(); for (const p of ps) cpt.set(p.cat, (cpt.get(p.cat) || 0) + 1);
+    e.parts = [...cpt.entries()].map(([cle, n]) => ({ cle, n, c: couleurCat(cle) })).sort((a, b) => b.n - a.n);
+    if (depart && xy) e.dist = distanceKm(depart, e);
+    if (xy) { etabs.push(e); parUai.set(uai, e); }
+    else if (!RE_UAI.test(uai) || (geo[uai] && geo[uai].d === null)) introuvables.push(e);
+  }
+  // UAI introuvables : aussi ceux des personnes masquées ou filtrées, pour l’aide
+  for (const p of personnes) if (p.uai && !groupes.has(p.uai) && !coordonnees(p.uai, [p.rec]) && (!RE_UAI.test(p.uai) || (geo[p.uai] && geo[p.uai].d === null)) && !introuvables.some(e => e.uai === p.uai)) {
+    introuvables.push({ uai: p.uai, pers: personnes.filter(q => q.uai === p.uai), nom: '' });
+  }
+  visibles = etabs.flatMap(e => e.pers);      // « affichées » = placées sur la carte
+  for (const id of [...selection]) if (!personnes.some(p => p.id === id)) selection.delete(id);
+  afficherTout();
+  geolocaliser();
+}
+function afficherTout() {
+  majCarte();
+  rendreLegende();
+  rendreStatut();
+  rendreBarreSelection();
+  majLibelles();
+  if (ficheUai) { if (parUai.has(ficheUai)) rendreFiche(); else fermerFiche(); }
+  if (!$('tableau').hidden) rendreTableau();
+}
+
+// ------------------------------------------------------------------------------------------------ open data
+function frais(c) { return c && (Date.now() - c.t) < (c.d ? DUREE_CACHE : DUREE_ABSENT); }
+function sauverGeo() {
+  if (!local.ecrire('geo', geo)) {    // place pleine : on ne garde que les UAI de cette table
+    const garder = {}; for (const p of personnes) if (geo[p.uai]) garder[p.uai] = geo[p.uai];
+    geo = garder; local.ecrire('geo', geo);
+  }
+}
+async function lireJson(url) {
+  const r = await fetch(url);
+  if (!r.ok) throw new Error(`réponse ${r.status}`);
+  return r.json();
+}
+const listeIn = uais => `(${uais.map(u => `"${u}"`).join(',')})`;
+async function geolocaliser() {
+  if (geoEnCours) return;
+  const manquants = [...new Set(personnes.map(p => p.uai))].filter(u => RE_UAI.test(u) && !frais(geo[u]) && !coordonnees(u, personnes.filter(p => p.uai === u).map(p => p.rec)));
+  if (!manquants.length) return;
+  geoEnCours = true; erreurGeo = ''; rendreStatut();
+  let change = false;
+  try {
+    for (let i = 0; i < manquants.length; i += PAQUET) {
+      const paquet = manquants.slice(i, i + PAQUET);
+      const params = new URLSearchParams({ where: `numero_uai in ${listeIn(paquet)}`, limit: '100',
+        select: 'numero_uai,appellation_officielle,libelle_commune,latitude,longitude,nature_uai,nature_uai_libe,secteur_public_prive_libe,libelle_academie,libelle_departement,adresse_uai,code_postal_uai' });
+      const j = await lireJson(`${API_GEO}/records?${params}`);
+      const trouves = new Set();
+      for (const x of j.results || []) {
+        const u = normUai(x.numero_uai); trouves.add(u);
+        geo[u] = { t: Date.now(), d: { nom: x.appellation_officielle || '', commune: x.libelle_commune || '', lat: nombre(x.latitude), lon: nombre(x.longitude),
+          nature: x.nature_uai, natureLib: x.nature_uai_libe || '', secteur: x.secteur_public_prive_libe || '', academie: x.libelle_academie || '',
+          dep: x.libelle_departement || '', adresse: x.adresse_uai || '', cp: x.code_postal_uai || '' } };
+        if (geo[u].d.lat == null) geo[u].d = null;
+      }
+      for (const u of paquet) if (!trouves.has(u)) geo[u] = { t: Date.now(), d: null };
+      change = true;
+    }
+  } catch (e) {
+    erreurGeo = `Les données ouvertes de l’Éducation nationale ne répondent pas (${e.message || e}). Nouvel essai au prochain changement.`;
+    toast(erreurGeo);
+  }
+  geoEnCours = false;
+  if (change) { sauverGeo(); recalculer(); } else rendreStatut();
+}
+async function chargerAnnuaire(uais) {
+  const manquants = [...new Set(uais)].filter(u => RE_UAI.test(u) && !frais(annu[u]));
+  if (!manquants.length) return false;
+  try {
+    for (let i = 0; i < manquants.length; i += PAQUET) {
+      const paquet = manquants.slice(i, i + PAQUET);
+      const params = new URLSearchParams({ where: `identifiant_de_l_etablissement in ${listeIn(paquet)}`, limit: '100', select: 'identifiant_de_l_etablissement,mail,web,telephone' });
+      const j = await lireJson(`${API_ANNU}/records?${params}`);
+      const vus = new Set();
+      for (const x of j.results || []) { const u = normUai(x.identifiant_de_l_etablissement); vus.add(u); annu[u] = { t: Date.now(), d: { mail: x.mail || '', web: x.web || '', tel: x.telephone || '' } }; }
+      for (const u of paquet) if (!vus.has(u)) annu[u] = { t: Date.now(), d: null };
+    }
+    local.ecrire('annuaire', annu);
+    return true;
+  } catch (e) { return false; }
+}
+function mailEtab(uai) {
+  const a = annu[uai] && annu[uai].d;
+  if (a && estMail(a.mail)) return a.mail;
+  const e = parUai.get(uai), g = geo[uai] && geo[uai].d;
+  const aca = (e && e.academie) || (g && g.academie) || academieProbable();
+  const dom = domaineAcademie(aca);
+  return RE_UAI.test(uai) && dom ? `ce.${uai.toLowerCase()}@${dom}` : '';
+}
+function siteEtab(uai) {
+  const a = annu[uai] && annu[uai].d; let w = a && a.web;
+  if (!w) return '';
+  if (!/^https?:\/\//i.test(w)) w = 'https://' + w;
+  return w;
+}
+function academieProbable() {
+  const n = new Map();
+  for (const e of etabs) if (e.academie) n.set(e.academie, (n.get(e.academie) || 0) + e.n);
+  let best = 'Orléans-Tours', m = 0; for (const [a, k] of n) if (k > m) { m = k; best = a; }
+  return best;
+}
+async function chargerAcademies() {
+  if (listeAcademies) return listeAcademies;
+  const mem = local.lire('academies', null);
+  if (mem && Date.now() - mem.t < DUREE_CACHE) return (listeAcademies = mem.d);
+  try {
+    const j = await lireJson(`${API_GEO}/records?${new URLSearchParams({ select: 'libelle_academie', group_by: 'libelle_academie', limit: '100' })}`);
+    const l = (j.results || []).map(x => x.libelle_academie).filter(Boolean).sort((a, b) => a.localeCompare(b, 'fr'));
+    if (l.length) { listeAcademies = l; local.ecrire('academies', { t: Date.now(), d: l }); return l; }
+  } catch (e) { /* liste intégrée */ }
+  return (listeAcademies = ACADEMIES);
+}
+async function chargerFond() {
+  if (!reglages.fond.actif) { fondDonnees = null; majFond(); return; }
+  const aca = reglages.fond.academie || academieProbable();
+  const cle = 'fond:' + sansAccents(aca);
+  const mem = local.lire(cle, null);
+  if (mem && mem.a === aca && Date.now() - mem.t < DUREE_CACHE) { fondDonnees = mem.d; majFond(); return; }
+  rendreStatut('Téléchargement des établissements de l’académie…');
+  try {
+    const params = new URLSearchParams({ where: `libelle_academie="${aca.replace(/"/g, '')}"`, select: 'numero_uai,appellation_officielle,libelle_commune,latitude,longitude,nature_uai,secteur_public_prive_libe' });
+    const j = await lireJson(`${API_GEO}/exports/json?${params}`);
+    fondDonnees = (Array.isArray(j) ? j : j.results || []).filter(x => nombre(x.latitude) != null)
+      .map(x => [normUai(x.numero_uai), x.appellation_officielle || '', x.libelle_commune || '', nombre(x.latitude), nombre(x.longitude), +x.nature_uai, secteurDe(x.secteur_public_prive_libe)]);
+    local.ecrire(cle, { a: aca, t: Date.now(), d: fondDonnees });
+  } catch (e) { fondDonnees = null; toast(`Fond d’établissements indisponible (${e.message || e}).`); }
+  rendreStatut();
+  majFond();
+}
+
+// ------------------------------------------------------------------------------------------------ carte
+function themeEffectif() { return theme === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair') : theme; }
+let themeApplique = null;
+function appliquerTheme() {
+  const t = themeEffectif();
+  document.documentElement.dataset.theme = t;
+  $('b-theme').innerHTML = ic(theme === 'auto' ? 'contrast' : theme === 'sombre' ? 'moon' : 'sun');
+  $('b-theme').title = `Thème : ${theme === 'auto' ? 'automatique (comme le système)' : theme} — cliquer pour changer`;
+  if (map && themeApplique && themeApplique !== t) map.setStyle(STYLES[t], { diff: false });   // couches remises sur styledata
+  themeApplique = t;
+}
+function initCarte() {
+  if (typeof maplibregl === 'undefined') {
+    $('carte').innerHTML = `<div class="sans-carte">${ic('alert')}<span>La carte n’a pas pu être chargée (bibliothèque MapLibre injoignable). La liste reste disponible avec le bouton ${ic('list')}.</span></div>`;
+    return;
+  }
+  map = new maplibregl.Map({ container: 'carte', style: STYLES[themeEffectif()], center: [1.75, 47.5], zoom: 6.6, preserveDrawingBuffer: true, attributionControl: { compact: true } });
+  themeApplique = themeEffectif();
+  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+  map.on('styledata', ajouterCouches);
+  map.on('load', ajouterCouches);
+  map.on('render', planifierMarqueurs);
+  map.on('click', clicCarte);
+  map.on('click', 'fond', e => {
+    const f = e.features && e.features[0]; if (!f) return;
+    const p = f.properties;
+    new maplibregl.Popup({ closeButton: true, className: 'survol', offset: 8 }).setLngLat(f.geometry.coordinates)
+      .setHTML(`<b>${esc(p.nom)}</b><div class="sous">${esc([p.commune, TYPES[typeEtab(p.nature)], p.uai].filter(Boolean).join(' · '))}</div><div class="sous">Personne de la table ici : aucune</div>`).addTo(map);
+  });
+  map.on('mouseenter', 'fond', () => { map.getCanvas().style.cursor = 'pointer'; });
+  map.on('mouseleave', 'fond', () => { map.getCanvas().style.cursor = ''; });
+  initSelectionRectangle();
+}
+const vide = () => ({ type: 'FeatureCollection', features: [] });
+function geojsonEtabs() {
+  return { type: 'FeatureCollection', features: etabs.map(e => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lon, e.lat] }, properties: { uai: e.uai, n: e.n } })) };
+}
+function geojsonFond() {
+  if (!reglages.fond.actif || !fondDonnees) return vide();
+  const types = new Set(reglages.fond.types), sect = new Set(reglages.fond.secteurs);
+  return { type: 'FeatureCollection', features: fondDonnees.filter(x => types.has(groupeType(x[5])) && sect.has(x[6]) && !parUai.has(x[0]))
+    .map(x => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [x[4], x[3]] }, properties: { uai: x[0], nom: x[1], commune: x[2], nature: x[5] } })) };
+}
+function cercle(c, km) {
+  const pts = [], R = 6371, d = km / R, la = c.lat * Math.PI / 180, lo = c.lon * Math.PI / 180;
+  for (let i = 0; i <= 72; i++) {
+    const b = i / 72 * 2 * Math.PI;
+    const la2 = Math.asin(Math.sin(la) * Math.cos(d) + Math.cos(la) * Math.sin(d) * Math.cos(b));
+    const lo2 = lo + Math.atan2(Math.sin(b) * Math.sin(d) * Math.cos(la), Math.cos(d) - Math.sin(la) * Math.sin(la2));
+    pts.push([lo2 * 180 / Math.PI, la2 * 180 / Math.PI]);
+  }
+  return pts;
+}
+function geojsonRayons() {
+  if (!depart) return vide();
+  return { type: 'FeatureCollection', features: (depart.rayons || []).map(km => ({ type: 'Feature', geometry: { type: 'LineString', coordinates: cercle(depart, km) }, properties: { km } })) };
+}
+function ajouterCouches() {
+  if (!map) return;
+  try {
+    if (map.getSource('etabs')) return;
+    const sombre = themeEffectif() === 'sombre';
+    map.addSource('fond', { type: 'geojson', data: geojsonFond() });
+    map.addLayer({ id: 'fond', type: 'circle', source: 'fond', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 1.8, 12, 4.5], 'circle-color': sombre ? '#6b7280' : '#b3aea6', 'circle-opacity': .85 } });
+    map.addSource('rayons', { type: 'geojson', data: geojsonRayons() });
+    map.addLayer({ id: 'rayons', type: 'line', source: 'rayons', paint: { 'line-color': '#33c1e8', 'line-width': 1.6, 'line-dasharray': [3, 2] } });
+    map.addSource('etabs', { type: 'geojson', data: geojsonEtabs(), cluster: !!reglages.regrouper, clusterRadius: 46, clusterMaxZoom: 10, clusterProperties: { personnes: ['+', ['get', 'n']] } });
+    map.addLayer({ id: 'etabs', type: 'circle', source: 'etabs', paint: { 'circle-radius': 1, 'circle-opacity': 0, 'circle-stroke-width': 0 } });
+    viderMarqueurs(); planifierMarqueurs();
+  } catch (e) { /* style pas encore prêt : nouvel essai au prochain « styledata » */ }
+}
+function majCarte() {
+  if (!map) return;
+  const s = map.getSource && map.getSource('etabs');
+  if (s) { s.setData(geojsonEtabs()); viderMarqueurs(); planifierMarqueurs(); }
+  majFond(); majDepart();
+  if (!cadreFait && etabs.length) { cadreFait = true; cadrer(etabs, false); }
+}
+function majFond() { const s = map && map.getSource && map.getSource('fond'); if (s) s.setData(geojsonFond()); }
+function rebatirSourceEtabs() {
+  if (!map) return;
+  try { if (map.getLayer('etabs')) map.removeLayer('etabs'); if (map.getSource('etabs')) map.removeSource('etabs'); } catch (e) { /* rien */ }
+  try {
+    map.addSource('etabs', { type: 'geojson', data: geojsonEtabs(), cluster: !!reglages.regrouper, clusterRadius: 46, clusterMaxZoom: 10, clusterProperties: { personnes: ['+', ['get', 'n']] } });
+    map.addLayer({ id: 'etabs', type: 'circle', source: 'etabs', paint: { 'circle-radius': 1, 'circle-opacity': 0, 'circle-stroke-width': 0 } });
+  } catch (e) { /* style en cours de chargement */ }
+  viderMarqueurs(); planifierMarqueurs();
+}
+function cadrer(liste, anime = true) {
+  if (!map || !liste.length) return;
+  const b = new maplibregl.LngLatBounds();
+  liste.forEach(e => b.extend([e.lon, e.lat]));
+  map.fitBounds(b, { padding: { top: 90, bottom: 70, left: 60, right: 60 }, maxZoom: 12.5, duration: anime ? 700 : 0 });
+}
+let marqueurs = {}, rafM = 0;
+function planifierMarqueurs() { if (rafM) return; rafM = requestAnimationFrame(() => { rafM = 0; majMarqueurs(); }); }
+function viderMarqueurs() { for (const k in marqueurs) marqueurs[k].remove(); marqueurs = {}; cacherSurvol(); }
+function majMarqueurs() {
+  if (!map || !map.getSource('etabs') || !map.isSourceLoaded('etabs')) return;
+  const nouveaux = {};
+  for (const f of map.querySourceFeatures('etabs')) {
+    const p = f.properties || {};
+    const cle = p.cluster ? 'c' + p.cluster_id : 'e' + p.uai;
+    if (nouveaux[cle]) continue;
+    let m = marqueurs[cle];
+    if (!m) { m = p.cluster ? marqueurGroupe(f) : marqueurEtab(p.uai); if (!m) continue; m.addTo(map); }
+    nouveaux[cle] = m;
+  }
+  for (const k in marqueurs) if (!nouveaux[k]) marqueurs[k].remove();
+  marqueurs = nouveaux;
+}
+function fondPoint(parts) {
+  const tot = parts.reduce((s, x) => s + x.n, 0);
+  if (parts.length === 1 || reglages.couleur.mode === 'majoritaire') return parts[0].c;
+  let acc = 0;
+  return 'conic-gradient(' + parts.map(x => { const a = acc; acc += x.n / tot * 100; return `${x.c} ${a.toFixed(2)}% ${acc.toFixed(2)}%`; }).join(', ') + ')';
+}
+const taillePoint = n => n > 9 ? 30 : n > 4 ? 26 : n > 1 ? 22 : 16;
+function marqueurEtab(uai) {
+  const e = parUai.get(uai); if (!e) return null;
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'pt' + (uai === ficheUai ? ' actif' : '') + (e.pers.some(p => selection.has(p.id)) ? ' choisi' : '');
+  const t = taillePoint(e.n); el.style.width = el.style.height = t + 'px';
+  el.style.background = fondPoint(e.parts);
+  el.dataset.uai = uai;
+  el.setAttribute('aria-label', `${e.nom}, ${e.commune} : ${pluriel(e.n, 'personne', 'personnes')}. Ouvrir la fiche.`);
+  if (e.n > 1) el.innerHTML = `<span class="badge">${e.n}</span>`;
+  el.addEventListener('mouseenter', () => montrerSurvol(e));
+  el.addEventListener('mouseleave', cacherSurvol);
+  el.addEventListener('focus', () => montrerSurvol(e));
+  el.addEventListener('blur', cacherSurvol);
+  el.addEventListener('click', ev => { ev.stopPropagation(); ouvrirFiche(uai); });
+  return new maplibregl.Marker({ element: el }).setLngLat([e.lon, e.lat]);
+}
+function marqueurGroupe(f) {
+  const p = f.properties, n = p.personnes || p.point_count;
+  const el = document.createElement('button');
+  el.type = 'button'; el.className = 'groupe-pt';
+  const t = n > 50 ? 52 : n > 15 ? 46 : 40; el.style.width = el.style.height = t + 'px';
+  el.innerHTML = `<span>${n}</span>`;
+  el.dataset.groupe = '1'; el.dataset.n = n;
+  el.setAttribute('aria-label', `Groupe de ${p.point_count} établissements, ${n} personnes. Zoomer.`);
+  el.addEventListener('click', async ev => {
+    ev.stopPropagation();
+    try { const z = await map.getSource('etabs').getClusterExpansionZoom(p.cluster_id); map.easeTo({ center: f.geometry.coordinates, zoom: z + .3 }); }
+    catch (e) { map.easeTo({ center: f.geometry.coordinates, zoom: map.getZoom() + 2 }); }
+  });
+  return new maplibregl.Marker({ element: el }).setLngLat(f.geometry.coordinates);
+}
+let popupSurvol = null;
+function htmlSurvol(e) {
+  const s = reglages.bulles.survol, l = [];
+  if (s.commune && e.commune) l.push(esc(e.commune));
+  if (s.type && e.typeLib) l.push(esc(e.typeLib));
+  if (s.nombre) l.push(pluriel(e.n, 'personne', 'personnes'));
+  return `<b>${esc(e.nom)}</b>${l.length ? `<div class="sous">${l.join(' · ')}</div>` : ''}`;
+}
+function montrerSurvol(e) {
+  cacherSurvol();
+  if (!map || modeSel) return;
+  popupSurvol = new maplibregl.Popup({ closeButton: false, closeOnClick: false, offset: 16, className: 'survol', maxWidth: '300px' })
+    .setLngLat([e.lon, e.lat]).setHTML(htmlSurvol(e)).addTo(map);
+}
+function cacherSurvol() { if (popupSurvol) { popupSurvol.remove(); popupSurvol = null; } }
+
+// point de départ
+let marqueursDepart = [];
+function majDepart() {
+  marqueursDepart.forEach(m => m.remove()); marqueursDepart = [];
+  const s = map && map.getSource && map.getSource('rayons'); if (s) s.setData(geojsonRayons());
+  $('lib-depart').textContent = depart ? `Départ : ${depart.nom}` : 'Départ';
+  $('b-depart').classList.toggle('actif', !!depart);
+  if (!map || !depart) return;
+  const pin = document.createElement('div'); pin.className = 'depart-pin'; pin.innerHTML = ic('pin'); pin.title = `Point de départ : ${depart.nom}`;
+  marqueursDepart.push(new maplibregl.Marker({ element: pin, anchor: 'bottom' }).setLngLat([depart.lon, depart.lat]).addTo(map));
+  for (const km of depart.rayons || []) {
+    const pt = cercle(depart, km)[18];       // point à l’est
+    const el = document.createElement('div'); el.className = 'etiquette-rayon'; el.textContent = km + ' km';
+    marqueursDepart.push(new maplibregl.Marker({ element: el, anchor: 'left', offset: [4, 0] }).setLngLat(pt).addTo(map));
+  }
+}
+let modeDepartClic = false;
+function clicCarte(ev) {
+  if (modeDepartClic) {
+    modeDepartClic = false; document.body.classList.remove('mode-depart');
+    definirDepart({ nom: 'point choisi', lat: ev.lngLat.lat, lon: ev.lngLat.lng });
+  }
+}
+function definirDepart(d) {
+  depart = d ? { rayons: depart ? depart.rayons : [10, 20, 50], ...d } : null;
+  if (depart && d && d.rayons) depart.rayons = d.rayons;
+  local.ecrire('depart', depart);
+  recalculer();
+}
+
+// sélection au rectangle
+let modeSel = false;
+function basculerModeSelection(force) {
+  modeSel = force ?? !modeSel;
+  $('b-selection').setAttribute('aria-pressed', String(modeSel));
+  document.body.classList.toggle('mode-selection', modeSel);
+  if (map) modeSel ? map.dragPan.disable() : map.dragPan.enable();
+  if (modeSel) { cacherSurvol(); toast('Faites glisser sur la carte pour entourer des établissements (Échap pour annuler).'); }
+}
+function initSelectionRectangle() {
+  const zone = map.getCanvasContainer();
+  let debut = null, rect = null;
+  const pos = ev => { const b = zone.getBoundingClientRect(); return { x: ev.clientX - b.left, y: ev.clientY - b.top }; };
+  zone.addEventListener('pointerdown', ev => {
+    if (!modeSel || ev.button !== 0) return;
+    debut = pos(ev); rect = document.createElement('div'); rect.className = 'rect-sel'; zone.appendChild(rect);
+    zone.setPointerCapture(ev.pointerId); ev.preventDefault();
+  });
+  zone.addEventListener('pointermove', ev => {
+    if (!debut) return;
+    const p = pos(ev);
+    Object.assign(rect.style, { left: Math.min(p.x, debut.x) + 'px', top: Math.min(p.y, debut.y) + 'px', width: Math.abs(p.x - debut.x) + 'px', height: Math.abs(p.y - debut.y) + 'px' });
+  });
+  zone.addEventListener('pointerup', ev => {
+    if (!debut) return;
+    const p = pos(ev), x1 = Math.min(p.x, debut.x), x2 = Math.max(p.x, debut.x), y1 = Math.min(p.y, debut.y), y2 = Math.max(p.y, debut.y);
+    rect.remove(); rect = null; debut = null;
+    if (x2 - x1 < 4 && y2 - y1 < 4) return;
+    selectionnerZone(x1, y1, x2, y2);
+    basculerModeSelection(false);
+  });
+}
+function selectionnerZone(x1, y1, x2, y2) {
+  let n = 0, k = 0;
+  for (const e of etabs) {
+    const q = map.project([e.lon, e.lat]);
+    if (q.x >= x1 && q.x <= x2 && q.y >= y1 && q.y <= y2) { k++; for (const p of e.pers) if (!selection.has(p.id)) { selection.add(p.id); n++; } }
+  }
+  toast(k ? `${pluriel(n, 'personne ajoutée', 'personnes ajoutées')} à la sélection (${pluriel(k, 'établissement', 'établissements')}).` : 'Aucun établissement dans ce rectangle.');
+  apresSelection();
+}
+function apresSelection() {
+  rendreBarreSelection();
+  viderMarqueurs(); planifierMarqueurs();
+  if (ficheUai) rendreFiche();
+  if (!$('tableau').hidden) rendreTableau();
+}
+
+// ------------------------------------------------------------------------------------------------ légende, statut
+function majLibelles() {
+  const c = colonneCouleurActive();
+  $('lib-couleur').textContent = reglages.couleur.source === 'colonne' ? 'colonne couleur' : (c || 'aucune');
+  $('lib-filtre').textContent = filtre ? `Filtre : ${filtre.col}` : 'Filtrer';
+  $('b-filtre').classList.toggle('actif', !!filtre);
+}
+let legendeRepliee = innerWidth < 700;
+function rendreLegende() {
+  const c = colonneCouleurActive(), f = reglages.fond;
+  const titre = reglages.couleur.source === 'colonne' ? 'Couleurs de la table' : (c || 'Personnes');
+  const items = categories.map(k => `<button class="leg-item${masquees.has(k.cle) ? ' masque' : ''}" data-cat="${esc(k.cle)}" aria-pressed="${!masquees.has(k.cle)}" title="${masquees.has(k.cle) ? 'Montrer' : 'Masquer'} « ${esc(k.lib)} »">
+      <span class="pastille" style="background:${esc(k.couleur)}"></span><span>${esc(k.lib)}</span><span class="n">${k.n}</span></button>`).join('');
+  const puces = TYPES_FOND.map(([k, l]) => `<button class="puce" data-type="${k}" aria-pressed="${f.types.includes(k)}">${l}</button>`).join('')
+    + ['Public', 'Privé'].map(s => `<button class="puce" data-secteur="${s}" aria-pressed="${f.secteurs.includes(s)}">${s}</button>`).join('');
+  $('legende').classList.toggle('replie', legendeRepliee);
+  $('legende').innerHTML = `<div class="leg-tete"><b>${esc(titre)}</b>
+      <button class="fermer" id="leg-replier" aria-expanded="${!legendeRepliee}" aria-label="${legendeRepliee ? 'Déplier' : 'Replier'} la légende">${ic(legendeRepliee ? 'down' : 'up')}</button></div>
+    <div class="leg-corps">
+      ${items || '<p class="aide-texte">Aucune personne à afficher.</p>'}
+      ${categories.length > 1 ? '<p class="aide-texte">Cliquer une ligne pour la masquer ou la montrer.</p>' : ''}
+      <hr class="sep">
+      <label class="case"><input type="checkbox" id="c-regrouper" ${reglages.regrouper ? 'checked' : ''}>Regrouper les points proches</label>
+      <label class="case"><input type="checkbox" id="c-fond" ${f.actif ? 'checked' : ''}>Fond d’établissements</label>
+      ${f.actif ? `<div class="sous-fond"><div class="puces" style="padding-left:0">${puces}</div>
+        <label class="champ"><span class="sr">Académie</span><select id="c-academie" aria-label="Académie du fond">${[...new Set([f.academie || academieProbable(), ...(listeAcademies || ACADEMIES)])].map(a => `<option ${a === (f.academie || academieProbable()) ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label></div>` : ''}
+    </div>`;
+  if (f.actif && !listeAcademies) chargerAcademies().then(() => rendreLegende());
+}
+function rendreStatut(message) {
+  const n = visibles.length;
+  let h = `<span class="info">${pluriel(n, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtre || masquees.size ? ' (filtrés)' : ''}</span>`;
+  if (geoEnCours || message) h += `<span class="info">${esc(message || 'Recherche des coordonnées des établissements…')}</span>`;
+  const nbI = new Set(introuvables.map(e => e.uai)).size;
+  if (nbI || sansUai.length) h += `<button class="btn petit alerte" id="b-introuvables">${ic('alert')}${nbI ? pluriel(nbI, 'UAI introuvable', 'UAI introuvables') : ''}${nbI && sansUai.length ? ' · ' : ''}${sansUai.length ? pluriel(sansUai.length, 'ligne sans UAI', 'lignes sans UAI') : ''}</button>`;
+  if (erreurGeo && !geoEnCours) h += `<button class="btn petit alerte" id="b-reessayer">${ic('refresh')}Réessayer l’open data</button>`;
+  $('statut').innerHTML = h;
+}
+function rendreBarreSelection() {
+  const n = selection.size;
+  $('barre-selection').hidden = n === 0;
+  if (!n) return;
+  const us = new Set(personnes.filter(p => selection.has(p.id)).map(p => p.uai));
+  $('barre-selection').innerHTML = `<span><b>Sélection : ${pluriel(n, 'personne', 'personnes')}</b> <span class="doux">dans ${pluriel(us.size, 'établissement', 'établissements')}</span></span>
+    <button class="btn primaire" id="sel-ecrire">${ic('mail')}Écrire…</button>
+    <button class="btn" id="sel-copier">${ic('copy')}Copier les adresses</button>
+    <button class="btn ico" id="sel-vider" aria-label="Vider la sélection" title="Vider la sélection">${ic('x')}</button>`;
+}
+
+// ------------------------------------------------------------------------------------------------ fiche
+function rendreModele(modele, r, html = true) {
+  const parts = [], re = /\{([^{}]+)\}/g; let i = 0, m;
+  while ((m = re.exec(modele))) {
+    if (m.index > i) parts.push({ lit: modele.slice(i, m.index) });
+    parts.push({ c: m[1], v: colonnesTable.includes(m[1]) ? texte(r[m[1]]) : '' });
+    i = re.lastIndex;
+  }
+  if (i < modele.length) parts.push({ lit: modele.slice(i) });
+  const SEP = /^[\s—–\-·,;:|/]*$/;
+  for (let k = 0; k < parts.length; k++) {
+    if (!parts[k].c || parts[k].v) continue;
+    if (k > 0 && parts[k - 1].lit != null && SEP.test(parts[k - 1].lit)) parts[k - 1].lit = k - 1 === 0 ? '' : (/\s/.test(parts[k - 1].lit) ? ' ' : '');
+    else if (k + 1 < parts.length && parts[k + 1].lit != null && SEP.test(parts[k + 1].lit)) parts[k + 1].lit = ' ';
+    if (k + 1 < parts.length && parts[k + 1].lit != null && !SEP.test(parts[k + 1].lit) && parts[k + 1].lit.trim().length <= 4 && !/[—·]/.test(parts[k + 1].lit)) parts[k + 1].lit = ' ';
+  }
+  const cNom = col('Nom');
+  const out = parts.map(p => p.c ? (html ? (p.c === cNom && p.v ? `<b>${esc(p.v)}</b>` : esc(p.v)) : p.v) : (html ? esc(p.lit) : p.lit)).join('');
+  return out.replace(/\s{2,}/g, ' ').replace(/^[\s—–\-·,;:|]+|[\s—–\-·,;:|]+$/g, '');
+}
+function modeleParDefaut() {
+  const cs = [col('Nom'), col('Prenom')].filter(Boolean);
+  let m = cs.map(c => `{${c}}`).join(' ');
+  if (col('Libelle')) m += ` — {${col('Libelle')}}`;
+  if (!m) m = colonnesTable.filter(c => c !== col('UAI')).slice(0, 2).map(c => `{${c}}`).join(' — ');
+  return m;
+}
+const modele = () => reglages.bulles.modele || modeleParDefaut();
+const mailPersonne = p => { const c = col('Mail'); const m = c ? texte(p.rec[c]) : ''; return estMail(m) ? m : ''; };
+const nomPersonne = p => [col('Nom') && texte(p.rec[col('Nom')]), col('Prenom') && texte(p.rec[col('Prenom')])].filter(Boolean).join(' ') || rendreModele(modele(), p.rec, false) || `ligne ${p.id}`;
+function lienItineraire(e) {
+  return depart ? `https://www.openstreetmap.org/directions?route=${depart.lat}%2C${depart.lon}%3B${e.lat}%2C${e.lon}`
+    : `https://www.openstreetmap.org/directions?route=%3B${e.lat}%2C${e.lon}#map=14/${e.lat}/${e.lon}`;
+}
+function htmlFiche(e, apercu = false) {
+  const b = reglages.bulles;
+  const sous = [e.commune, e.typeLib, e.secteur, e.uai].filter(Boolean).join(' · ');
+  const nSel = e.pers.filter(p => selection.has(p.id)).length;
+  const tous = nSel === e.pers.length;
+  const site = siteEtab(e.uai), me = mailEtab(e.uai);
+  const lignesP = e.pers.map(p => {
+    const m = mailPersonne(p);
+    return `<li data-id="${p.id}" class="${p.id === ficheTrouve ? 'trouve' : ''}">
+      ${apercu ? '' : `<input type="checkbox" data-sel="${p.id}" ${selection.has(p.id) ? 'checked' : ''} aria-label="Ajouter ${esc(nomPersonne(p))} à la sélection">`}
+      <span class="point" style="background:${esc(couleurCat(p.cat))}" title="${esc(p.cat)}"></span>
+      <span class="txt">${rendreModele(modele(), p.rec) || esc(nomPersonne(p))}</span>
+      ${b.mailParPersonne && m ? `<a class="mini" href="mailto:${esc(m)}" target="_blank" rel="noopener" aria-label="Écrire à ${esc(nomPersonne(p))}" title="Écrire à ${esc(m)}">${ic('mail')}</a>` : ''}
+      ${b.lienGrist && !apercu ? `<button class="mini" data-grist="${p.id}" aria-label="Voir la ligne de ${esc(nomPersonne(p))} dans Grist" title="Voir la ligne dans Grist">${ic('pen')}</button>` : ''}
+    </li>`;
+  }).join('');
+  return `<div class="fiche-tete"><div><h2 id="fiche-titre">${esc(e.nom)}</h2><div class="sous">${esc(sous)}</div>
+      ${e.adresse ? `<div class="sous">${esc(e.adresse)}</div>` : ''}
+      ${e.dist != null && depart ? `<div class="dist">à ${fmtKm(e.dist)} de ${esc(depart.nom)} (à vol d’oiseau)</div>` : ''}</div>
+      ${apercu ? '' : `<button class="fermer" id="fiche-fermer" aria-label="Fermer la fiche">${ic('x')}</button>`}</div>
+    <div class="liens">
+      ${site ? `<a class="btn petit" href="${esc(site)}" target="_blank" rel="noopener">${ic('external')}Site</a>` : ''}
+      <a class="btn petit" href="${esc(lienItineraire(e))}" target="_blank" rel="noopener">${ic('route')}Itinéraire</a>
+      ${me ? `<a class="btn petit" href="mailto:${esc(me)}" target="_blank" rel="noopener" title="${esc(me)}">${ic('mail')}Écrire à l’établissement</a>` : ''}
+    </div>
+    <div class="pers-tete">
+      <label>${apercu ? '' : `<input type="checkbox" id="fiche-tous" ${tous ? 'checked' : ''} aria-label="Tout cocher">`}${pluriel(e.n, 'personne', 'personnes')}</label>
+      ${!apercu && nSel ? `<button class="btn petit primaire" id="fiche-ecrire">${ic('mail')}Écrire ${nSel === 1 ? 'à la personne cochée' : `aux ${nSel} cochées`}</button>` : ''}
+    </div>
+    <ul class="pers">${lignesP}</ul>`;
+}
+function ouvrirFiche(uai, idTrouve = null) {
+  const e = parUai.get(uai); if (!e) return;
+  ficheUai = uai; ficheTrouve = idTrouve;
+  rendreFiche();
+  viderMarqueurs(); planifierMarqueurs();
+  chargerAnnuaire([uai]).then(ch => { if (ch && ficheUai === uai) rendreFiche(); });
+}
+function rendreFiche() {
+  const e = parUai.get(ficheUai); if (!e) return fermerFiche();
+  const f = $('fiche');
+  f.innerHTML = htmlFiche(e); f.hidden = false; document.body.classList.add('fiche-ouverte');
+  if (ficheTrouve) { const li = f.querySelector(`li[data-id="${ficheTrouve}"]`); if (li) li.scrollIntoView({ block: 'nearest' }); }
+}
+function fermerFiche() { ficheUai = null; ficheTrouve = null; $('fiche').hidden = true; document.body.classList.remove('fiche-ouverte'); viderMarqueurs(); planifierMarqueurs(); }
+function voirDansGrist(id) {
+  if (!DANS_GRIST) return toast('Dans Grist, ce bouton sélectionne la ligne de la personne dans la table.');
+  try { grist.setCursorPos({ rowId: id }); } catch (e) { toast('Impossible de sélectionner la ligne dans Grist.'); }
+}
+
+// ------------------------------------------------------------------------------------------------ fenêtres
+let retourFocus = null, surFermetureModale = null;
+function cleFocus(el) {   // retrouver l’élément actif après avoir redessiné la fenêtre
+  if (!el || !el.closest || !el.closest('#modale')) return null;
+  if (el.id) return '#' + CSS.escape(el.id);
+  const a = [...el.attributes].filter(x => x.name.startsWith('data-') || x.name === 'name' || x.name === 'value').map(x => `[${x.name}="${CSS.escape(x.value)}"]`).join('');
+  return a ? el.tagName.toLowerCase() + a : null;
+}
+function ouvrirModale(html, large = false, onFermer = null) {
+  fermerPop();
+  const deja = !$('modale-fond').hidden;
+  const cle = deja ? cleFocus(document.activeElement) : null;
+  if (!deja) { retourFocus = document.activeElement; surFermetureModale = onFermer; }
+  else if (onFermer) surFermetureModale = onFermer;
+  const m = $('modale'); m.className = 'modale' + (large ? ' large' : ''); m.innerHTML = html;
+  $('modale-fond').hidden = false;
+  const garde = cle && m.querySelector(cle);
+  const premier = garde || m.querySelector('[autofocus], input:not([disabled]), select:not([disabled]), textarea, button:not(.fermer)') || m.querySelector('button');
+  if (premier) premier.focus();
+}
+function fermerModale() {
+  if ($('modale-fond').hidden) return;
+  $('modale-fond').hidden = true; $('modale').innerHTML = '';
+  const f = surFermetureModale; surFermetureModale = null;
+  if (retourFocus && retourFocus.focus) retourFocus.focus();
+  if (f) f();
+}
+const teteModale = (icone, titre, sous) => `<div class="modale-tete"><div class="ico-titre">${ic(icone)}</div><div><h2 id="modale-titre">${titre}</h2>${sous ? `<p>${sous}</p>` : ''}</div>
+  <button class="fermer" data-fermer aria-label="Fermer">${ic('x')}</button></div>`;
+let popPour = null;
+function ouvrirPop(bouton, html, largeur = 320) {
+  if (popPour === bouton && !$('pop').hidden) return fermerPop();
+  const p = $('pop'); p.innerHTML = html; p.hidden = false; p.style.width = largeur + 'px';
+  const r = bouton.getBoundingClientRect();
+  const l = Math.max(8, Math.min(r.left, innerWidth - Math.min(largeur, innerWidth - 24) - 8));
+  p.style.left = l + 'px'; p.style.top = (r.bottom + 6) + 'px';
+  popPour = bouton;
+  const premier = p.querySelector('input, select, button'); if (premier) premier.focus();
+}
+function fermerPop() { $('pop').hidden = true; popPour = null; }
+let tToast = 0;
+function toast(m, ms = 4200) { const t = $('toast'); t.textContent = m; t.hidden = false; clearTimeout(tToast); tToast = setTimeout(() => { t.hidden = true; }, ms); }
+
+// ------------------------------------------------------------------------------------------------ réglages
+let tSauve = 0;
+function sauver() {
+  clearTimeout(tSauve);
+  tSauve = setTimeout(async () => {
+    if (!DANS_GRIST) return;
+    try { await grist.setOptions(JSON.parse(JSON.stringify(reglages))); }
+    catch (e) {
+      if (!avertiLecture) { avertiLecture = true; toast('Réglages gardés pour cette session seulement : seules les personnes qui peuvent modifier le document les enregistrent.', 7000); }
+    }
+  }, 300);
+}
+
+// --- assistant « Colorier selon… »
+let brouillonCouleur = null, etapeCouleur = 1;
+function ouvrirCouleurs() {
+  brouillonCouleur = JSON.parse(JSON.stringify(reglages.couleur));
+  if (brouillonCouleur.source === 'categorie' && !brouillonCouleur.col) brouillonCouleur.col = colonneCouleurActive();
+  etapeCouleur = 1; rendreCouleurs();
+}
+function rendreCouleurs() {
+  const b = brouillonCouleur;
+  if (etapeCouleur === 1) {
+    const exclues = new Set([col('UAI'), col('Nom'), col('Prenom'), col('Mail'), col('Latitude'), col('Longitude')].filter(Boolean));
+    const infos = colonnesTable.filter(c => !exclues.has(c)).map(c => analyserColonne(c)).filter(i => i.genre !== 'vide');
+    const bons = infos.filter(i => i.bon).sort((x, y) => (x.type === 'nombre') - (y.type === 'nombre') || x.distinct - y.distinct);
+    const autres = infos.filter(i => !i.bon);
+    const apercu = i => i.type === 'nombre' ? `Dégradé : de ${i.date ? new Date(i.min).getFullYear() : i.min.toLocaleString('fr-FR')} à ${i.date ? new Date(i.max).getFullYear() : i.max.toLocaleString('fr-FR')}`
+      : `${pluriel(i.distinct, 'valeur', 'valeurs')} : ${i.valeurs.slice(0, 4).map(([v, n]) => `${v || 'vide'} (${n})`).join(', ')}${i.distinct > 4 ? '…' : ''}`;
+    const choix = (val, titre, sous, etiq, coche) => `<label class="choix"><input type="radio" name="cc-col" value="${esc(val)}" ${coche ? 'checked' : ''}>
+      <span><b>${esc(titre)}</b> ${etiq ? `<span class="etiq">${esc(etiq)}</span>` : ''}<span class="sous">${esc(sous)}</span></span></label>`;
+    const cCoul = col('Couleur');
+    ouvrirModale(`${teteModale('palette', 'Colorier selon…', 'Étape 1 sur 2 · le widget a regardé vos colonnes')}
+      <div style="font-weight:600">Colonnes qui font de bonnes catégories</div>
+      <div style="display:flex;flex-direction:column;gap:6px" role="radiogroup" aria-label="Colonne utilisée pour les couleurs">
+        ${bons.map(i => choix(i.col, i.col, apercu(i), i.genre, b.source === 'categorie' && b.col === i.col)).join('') || '<p class="aide-texte">Aucune colonne ne ressemble à une catégorie (trop de valeurs différentes).</p>'}
+        ${cCoul ? choix('__colonne', `Couleur lue dans la colonne ${cCoul}`, 'chaque ligne donne sa couleur au format #rrggbb', '', b.source === 'colonne') : ''}
+        ${choix('__aucune', 'Une seule couleur', 'tous les points pareils', '', b.source === 'aucune')}
+      </div>
+      ${autres.length ? `<details><summary>Autres colonnes (${autres.length})</summary><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
+        ${autres.map(i => choix(i.col, i.col, apercu(i) + ' — beaucoup de valeurs différentes', i.genre, b.source === 'categorie' && b.col === i.col)).join('')}</div></details>` : ''}
+      <p class="aide-texte">Écartées d’office : ${[...exclues].map(esc).join(', ') || 'aucune'} (servent à placer ou nommer les personnes).</p>
+      <div class="rangee fin"><button class="btn" data-fermer>Annuler</button><button class="btn primaire" id="cc-suivant">Suivant</button></div>`);
+    return;
+  }
+  // étape 2
+  const c = b.source === 'categorie' ? b.col : null;
+  const info = c ? analyserColonne(c) : null;
+  let vals = [];
+  if (info && info.type === 'texte') vals = info.valeurs.map(([v, n]) => [v || 'Sans valeur', n]);
+  const pal = (PALETTES[b.palette] || PALETTES.lisible).c;
+  let i = 0;
+  const couleurDe = v => v === 'Sans valeur' ? SANS : (b.valeurs[v] || pal[i++ % pal.length]);
+  ouvrirModale(`${teteModale('palette', 'Colorier selon…', `Étape 2 sur 2 · ${b.source === 'colonne' ? 'couleurs lues dans la table' : b.source === 'aucune' ? 'une seule couleur' : `couleurs de « ${esc(c)} »`}`)}
+    ${info && info.type === 'texte' ? `<div class="rangee"><span style="font-weight:600">Palette</span>
+        ${Object.entries(PALETTES).map(([k, p]) => `<button class="puce" data-palette="${k}" aria-pressed="${b.palette === k}">${p.nom}</button>`).join('')}
+        <button class="lien-btn" id="cc-raz">Couleurs par défaut</button></div>
+      <p class="aide-texte">Cliquer une pastille pour changer sa couleur.</p>
+      <div class="grille2">${vals.map(([v, n]) => `<label class="val-couleur"><input type="color" data-val="${esc(v)}" value="${esc(couleurDe(v))}" aria-label="Couleur de ${esc(v)}"><span>${esc(v)}</span><span class="n" style="flex:none;color:var(--doux)">${n}</span></label>`).join('')}</div>` : ''}
+    ${info && info.type === 'nombre' ? `<p>Dégradé en ${DEGRADE.length} classes :</p><div class="grille2">${bornes(info).map((x, k) => `<div class="val-couleur"><span class="pastille" style="background:${DEGRADE[k]}"></span><span>${esc(x.lib)}</span></div>`).join('')}</div>` : ''}
+    ${b.source === 'colonne' ? `<p>Chaque personne prend la couleur écrite dans sa ligne (format <code>#rrggbb</code>, par exemple <code>#2563eb</code>). Les autres valeurs sont en gris.</p>` : ''}
+    ${b.source !== 'aucune' ? `<div style="display:flex;flex-direction:column;gap:6px"><div style="font-weight:600">Établissement avec plusieurs couleurs</div>
+      <label class="case"><input type="radio" name="cc-mode" value="camembert" ${b.mode !== 'majoritaire' ? 'checked' : ''}><span class="pastille" style="background:conic-gradient(#2563eb 0 60%, #ea580c 60% 100%)"></span>Camembert (part de chaque couleur)</label>
+      <label class="case"><input type="radio" name="cc-mode" value="majoritaire" ${b.mode === 'majoritaire' ? 'checked' : ''}><span class="pastille" style="background:#2563eb"></span>Couleur la plus fréquente</label></div>` : ''}
+    <div class="rangee fin"><button class="btn" id="cc-retour">Retour</button><button class="btn primaire" id="cc-appliquer">Appliquer à la carte</button></div>`);
+}
+function lireChoixCouleur() {
+  const r = $('modale').querySelector('input[name="cc-col"]:checked'); if (!r) return false;
+  const b = brouillonCouleur;
+  if (r.value === '__colonne') b.source = 'colonne';
+  else if (r.value === '__aucune') b.source = 'aucune';
+  else { if (b.col !== r.value) b.valeurs = {}; b.source = 'categorie'; b.col = r.value; }
+  return true;
+}
+function appliquerCouleurs() {
+  const m = $('modale').querySelector('input[name="cc-mode"]:checked'); if (m) brouillonCouleur.mode = m.value;
+  $('modale').querySelectorAll('input[type="color"][data-val]').forEach(inp => {
+    const v = inp.dataset.val; if (inp.dataset.touche) brouillonCouleur.valeurs[v] = inp.value;
+  });
+  reglages.couleur = brouillonCouleur; masquees.clear();
+  sauver(); fermerModale(); recalculer();
+}
+
+// --- éditeur de bulles
+let brouillonBulles = null, ongletBulles = 'ligne', exempleIdx = 0;
+function ouvrirBulles() {
+  brouillonBulles = JSON.parse(JSON.stringify(reglages.bulles));
+  if (!brouillonBulles.modele) brouillonBulles.modele = modeleParDefaut();
+  const dans = new Set((brouillonBulles.modele.match(/\{([^{}]+)\}/g) || []).map(x => x.slice(1, -1)));
+  const ordre = [...dans].filter(c => colonnesTable.includes(c));
+  brouillonBulles.colonnes = [...ordre.map(c => ({ c, on: true })), ...colonnesTable.filter(c => !dans.has(c)).map(c => ({ c, on: false }))];
+  exempleIdx = Math.max(0, etabs.findIndex(e => e.uai === ficheUai));
+  rendreBulles();
+}
+function modeleDepuisColonnes(cols) {
+  const on = cols.filter(x => x.on).map(x => `{${x.c}}`);
+  if (!on.length) return '';
+  const [a, b2, ...reste] = on;
+  return [a, b2].filter(Boolean).join(' ') + (reste.length ? ' — ' + reste.join(' · ') : '');
+}
+function exempleBulles() {
+  if (!etabs.length) return null;
+  const tri = [...etabs].sort((a, b) => b.n - a.n);
+  return tri[exempleIdx % tri.length];
+}
+function htmlApercuBulles() {
+  const e = exempleBulles();
+  if (!e) return '<p class="aide-texte">Pas encore d’établissement placé sur la carte pour l’aperçu.</p>';
+  const garde = reglages.bulles; reglages.bulles = brouillonBulles;
+  const h = `<div class="apercu">${htmlFiche({ ...e, pers: e.pers.slice(0, 6), n: e.n }, true)}${e.n > 6 ? `<p class="aide-texte">… et ${e.n - 6} de plus</p>` : ''}</div>
+    <div class="alerte" style="background:var(--survol);border-color:var(--ligne);color:var(--texte)">Survol : ${htmlSurvol(e)}</div>`;
+  reglages.bulles = garde;
+  return h;
+}
+function rendreBulles() {
+  const b = brouillonBulles, o = ongletBulles;
+  const onglet = (k, l) => `<button role="tab" data-onglet="${k}" aria-selected="${o === k}">${l}</button>`;
+  let corps = '';
+  if (o === 'survol') corps = `<p>Au survol d’un point, une petite bulle donne le nom de l’établissement et :</p>
+      <label class="case"><input type="checkbox" data-survol="commune" ${b.survol.commune ? 'checked' : ''}>la commune</label>
+      <label class="case"><input type="checkbox" data-survol="type" ${b.survol.type ? 'checked' : ''}>le type d’établissement (collège, lycée…)</label>
+      <label class="case"><input type="checkbox" data-survol="nombre" ${b.survol.nombre ? 'checked' : ''}>le nombre de personnes</label>`;
+  if (o === 'ligne') corps = `<div style="font-weight:600">1. Colonnes à montrer <span style="font-weight:400;color:var(--doux)">(flèches pour l’ordre)</span></div>
+      <div class="liste-cases ordre">${b.colonnes.map((x, k) => `<label><input type="checkbox" data-colon="${k}" ${x.on ? 'checked' : ''}><span>${esc(x.c)}</span>
+        <span class="fleches"><button type="button" data-monter="${k}" aria-label="Monter ${esc(x.c)}">${ic('up')}</button><button type="button" data-descendre="${k}" aria-label="Descendre ${esc(x.c)}">${ic('down')}</button></span></label>`).join('')}</div>
+      <label class="champ"><span>2. Modèle de la ligne <span style="font-weight:400;color:var(--doux)">(modifiable : le texte entre accolades est remplacé)</span></span>
+        <input type="text" id="bu-modele" value="${esc(b.modele)}" spellcheck="false"></label>
+      <div class="aide-texte">Cliquer un champ pour l’insérer à l’endroit du curseur :</div>
+      <div class="champs-insert">${colonnesTable.slice(0, 40).map(c => `<button class="puce" data-inserer="${esc(c)}">${ic('plus', 'width:12px;height:12px')} ${esc(c)}</button>`).join('')}</div>`;
+  if (o === 'liens') corps = `<label class="case"><input type="checkbox" data-opt="mailParPersonne" ${b.mailParPersonne ? 'checked' : ''}>Lien « écrire » sur chaque personne ${col('Mail') ? `(colonne ${esc(col('Mail'))})` : '(aucune colonne mail trouvée)'}</label>
+      <label class="case"><input type="checkbox" data-opt="lienGrist" ${b.lienGrist ? 'checked' : ''}>Bouton « voir la ligne dans Grist »</label>
+      <label class="champ"><span>Trier les personnes par</span><select id="bu-tri"><option value="">${esc(col('Nom') || 'ordre de la table')} (par défaut)</option>
+        ${colonnesTable.map(c => `<option ${b.tri === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+      <p class="aide-texte">La fiche montre aussi : site de l’établissement (annuaire de l’éducation), itinéraire (OpenStreetMap), mail de l’établissement.</p>`;
+  ouvrirModale(`${teteModale('message', 'Contenu des bulles', 'Ce que l’on voit au survol et dans la fiche, avec un aperçu en direct')}
+    <div class="onglets" role="tablist">${onglet('survol', '1 · Survol')}${onglet('ligne', '2 · Ligne d’une personne')}${onglet('liens', '3 · Liens et tri')}</div>
+    <div class="deux-col"><div>${corps}</div><div><div class="rangee"><b>Aperçu</b>${etabs.length > 1 ? '<button class="lien-btn" id="bu-exemple" style="margin-left:auto">autre établissement</button>' : ''}</div><div id="bu-apercu">${htmlApercuBulles()}</div></div></div>
+    <div class="rangee"><span class="aide-texte" style="flex:1">Réglages gardés dans le document : tous ses lecteurs voient les mêmes bulles.</span>
+      <button class="btn" id="bu-defaut">Valeurs par défaut</button><button class="btn primaire" id="bu-enregistrer">Enregistrer</button></div>`, true);
+}
+function majApercuBulles() { const a = $('bu-apercu'); if (a) a.innerHTML = htmlApercuBulles(); }
+
+// --- colonnes / premier démarrage
+function ouvrirColonnes(premier = false) {
+  const roles = ['UAI', 'Nom', 'Prenom', 'Mail', 'Etablissement', 'Commune', 'Libelle', 'Groupe', 'Couleur', 'Latitude', 'Longitude'];
+  const opts = r => `<option value="">— aucune —</option>` + colonnesTable.map(c => `<option ${col(r) === c ? 'selected' : ''}>${esc(c)}</option>`).join('');
+  const parUaiI = new Map(); for (const e of introuvables) if (!parUaiI.has(e.uai)) parUaiI.set(e.uai, e);
+  const manq = [...parUaiI.values()].slice(0, 30).map(e => {
+    const qui = e.pers.slice(0, 3).map(nomPersonne).join(', ') + (e.pers.length > 3 ? '…' : '');
+    const aide = !RE_UAI.test(e.uai) ? 'Format incorrect : il faut 7 chiffres puis 1 lettre (exemple : 0451234A), sans espace.'
+      : 'Inconnu dans l’open data : établissement fermé ou fusionné, ou UAI mal saisi. Vérifier dans l’annuaire de l’éducation, ou donner une latitude et une longitude.';
+    const brut = texte(e.pers[0].rec[col('UAI')]) || e.uai;
+    return `<div class="manquant"><div class="rangee"><code>${esc(brut)}</code><span style="color:var(--doux)">· ${esc(qui)}</span>
+      <button class="btn petit" style="margin-left:auto" data-grist="${e.pers[0].id}">Voir dans Grist</button></div>
+      <div class="aide-m">${aide} ${RE_UAI.test(e.uai) ? `<a href="https://www.education.gouv.fr/annuaire?keywords=${encodeURIComponent(e.uai)}" target="_blank" rel="noopener">Chercher ${esc(e.uai)}</a>` : ''}</div></div>`;
+  }).join('');
+  const sansMsg = sansUai.length ? `<div class="alerte">${pluriel(sansUai.length, 'ligne n’a pas d’UAI', 'lignes n’ont pas d’UAI')} : ${sansUai.length > 1 ? 'elles ne sont pas' : 'elle n’est pas'} sur la carte (${esc(sansUai.slice(0, 4).map(nomPersonne).join(', '))}${sansUai.length > 4 ? '…' : ''}).</div>` : '';
+  const pleinAcces = acces === 'full';
+  ouvrirModale(`${teteModale('columns', premier ? 'Bienvenue dans Carto-profs' : 'Colonnes et UAI', `J’ai lu ${nomTable ? `la table <b>${esc(nomTable)}</b>` : 'la table'} (${pluriel(lignes.length, 'ligne', 'lignes')}). Voici ce que j’ai reconnu :`)}
+    ${!col('UAI') ? `<div class="alerte">Je ne trouve pas la colonne des UAI (codes RNE des établissements). Choisissez-la ci-dessous : sans elle, je ne peux pas placer les personnes.</div>` : ''}
+    <table class="tab-col"><tbody>${roles.map(r => `<tr><td>${ROLES[r]}</td><td><select data-role="${r}" aria-label="Colonne pour ${ROLES[r]}" ${mappings && mappings[r] ? 'disabled title="Choisie dans le panneau de droite de Grist"' : ''}>${opts(r)}</select></td>
+      <td>${col(r) ? esc(origineCol(r)) : ''}</td></tr>`).join('')}</tbody></table>
+    <p class="aide-texte">Vous pouvez aussi faire ce lien dans le panneau de droite de Grist (« Widget personnalisé », rubrique des colonnes) : il passe alors avant ces choix.</p>
+    ${sansMsg}
+    ${manq ? `<div style="font-weight:600;color:var(--alerte-texte)">${ic('alert')} ${pluriel(parUaiI.size, 'UAI introuvable', 'UAI introuvables')} dans l’open data</div><div style="display:flex;flex-direction:column;gap:6px">${manq}</div>` : ''}
+    <hr class="sep">
+    <div style="display:flex;flex-direction:column;gap:6px">
+      <div style="font-weight:600">Enregistrer les coordonnées dans la table <span class="etiq">facultatif</span></div>
+      <p class="aide-texte" style="margin:0">Écrit la latitude et la longitude de chaque établissement dans deux colonnes de la table (créées au besoin). Utile pour d’autres vues Grist ou si l’open data ne répond plus. Demande l’« accès complet au document » dans le panneau de droite de Grist.</p>
+      <div class="rangee"><button class="btn" id="col-ecrire" ${pleinAcces ? '' : 'disabled'}>${ic('pen')}Écrire les coordonnées</button>
+        ${pleinAcces ? '' : '<span class="aide-texte">Accès actuel : lecture de la table seulement.</span>'}</div>
+    </div>
+    <div class="rangee"><button class="lien-btn" id="col-vider">Vider la copie des établissements gardée dans ce navigateur</button><span style="flex:1"></span>
+      <button class="btn primaire" id="col-ok">${premier ? 'Voir la carte' : 'Fermer'}</button></div>`, false, () => {
+    if (!reglages.configure) { reglages.configure = true; sauver(); }
+    if (premier) setTimeout(lancerVisiteSiBesoin, 300);
+  });
+}
+async function ecrireCoordonnees() {
+  if (acces !== 'full') return toast('Il faut l’accès complet au document (panneau de droite de Grist).');
+  try {
+    const tableId = await grist.getSelectedTableId();
+    const cLa = col('Latitude') || 'Latitude', cLo = col('Longitude') || 'Longitude';
+    const actions = [];
+    if (!colonnesTable.includes(cLa)) actions.push(['AddColumn', tableId, cLa, { type: 'Numeric' }]);
+    if (!colonnesTable.includes(cLo)) actions.push(['AddColumn', tableId, cLo, { type: 'Numeric' }]);
+    const ids = [], la = [], lo = [];
+    for (const p of personnes) {
+      const g = geo[p.uai] && geo[p.uai].d; if (!g) continue;
+      if (nombre(p.rec[cLa]) != null && nombre(p.rec[cLo]) != null) continue;
+      ids.push(p.id); la.push(g.lat); lo.push(g.lon);
+    }
+    if (ids.length) actions.push(['BulkUpdateRecord', tableId, ids, { [cLa]: la, [cLo]: lo }]);
+    if (!ids.length) return toast('Toutes les lignes placées ont déjà leurs coordonnées.');
+    await grist.docApi.applyUserActions(actions);
+    toast(`${pluriel(ids.length, 'ligne complétée', 'lignes complétées')} (colonnes ${cLa} et ${cLo}).`);
+  } catch (e) { toast(`Écriture impossible : ${e.message || e}`); }
+}
+
+// --- filtre
+function ouvrirFiltre() {
+  const c = (filtre && filtre.col) || ($('pop').dataset.col) || colonneCouleurActive() || colonnesTable.find(x => analyserColonne(x).bon) || colonnesTable[0];
+  rendreFiltre(c, true);
+}
+function rendreFiltre(c, ouvrir = false) {
+  const info = c ? analyserColonne(c) : null;
+  const vals = info && info.type === 'texte' ? info.valeurs.map(([v, n]) => [v || 'Sans valeur', n]) : [];
+  const vides = info ? info.total - info.remplis : 0;
+  if (vides && !vals.some(([v]) => v === 'Sans valeur')) vals.push(['Sans valeur', vides]);
+  const garder = filtre && filtre.col === c ? filtre.garder : null;
+  const html = `<h3>Filtrer les personnes</h3>
+    <label class="champ"><span>Selon la colonne</span><select id="fi-col">${colonnesTable.map(x => `<option ${x === c ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
+    ${info && info.type === 'nombre' ? '<p class="aide-texte">Cette colonne a trop de valeurs différentes pour un filtre à cases.</p>' :
+      vals.length > 80 ? '<p class="aide-texte">Trop de valeurs différentes (plus de 80).</p>' :
+      `<div class="rangee"><button class="lien-btn" id="fi-tout">Tout cocher</button><button class="lien-btn" id="fi-rien">Tout décocher</button></div>
+      <div class="liste-cases">${vals.map(([v, n]) => `<label><input type="checkbox" data-fv="${esc(v)}" ${!garder || garder.has(v) ? 'checked' : ''}><span>${esc(v)}</span><span class="n">${n}</span></label>`).join('')}</div>`}
+    <div class="rangee fin"><button class="btn" id="fi-retirer" ${filtre ? '' : 'disabled'}>Retirer le filtre</button><button class="btn primaire" id="fi-fermer">Fermer</button></div>`;
+  if (ouvrir) ouvrirPop($('b-filtre'), html); else $('pop').innerHTML = html;
+  $('pop').dataset.col = c;
+}
+function lireFiltre() {
+  const c = $('pop').dataset.col, cases = [...$('pop').querySelectorAll('input[data-fv]')];
+  if (!cases.length) return;
+  const garder = new Set(cases.filter(x => x.checked).map(x => x.dataset.fv));
+  filtre = garder.size === cases.length ? null : { col: c, garder };
+  masquees.clear(); recalculer();
+  const r = $('fi-retirer'); if (r) r.disabled = !filtre;
+}
+
+// --- départ
+function ouvrirDepart() {
+  const r = depart ? depart.rayons || [] : [10, 20, 50];
+  ouvrirPop($('b-depart'), `<h3>Point de départ</h3>
+    <p class="aide-texte" style="margin:0">Votre commune ou votre bureau : la fiche donne alors les distances à vol d’oiseau, et des cercles entourent le point. Gardé dans ce navigateur seulement.</p>
+    <form id="de-form" class="rangee" style="flex-wrap:nowrap"><input type="search" id="de-q" placeholder="Commune ou adresse" style="flex:1;min-width:0" value="${depart ? esc(depart.nom) : ''}"><button class="btn primaire" type="submit">${ic('search')}<span class="sr">Chercher</span></button></form>
+    <div id="de-res"></div>
+    <button class="lien-btn" id="de-clic" style="align-self:flex-start">ou cliquer sur la carte</button>
+    <div class="rangee"><span style="font-weight:600">Cercles</span>${[10, 20, 50].map(k => `<label class="case"><input type="checkbox" data-rayon="${k}" ${r.includes(k) ? 'checked' : ''}>${k} km</label>`).join('')}</div>
+    <div class="rangee fin">${depart ? '<button class="btn" id="de-retirer">Retirer le point</button>' : ''}<button class="btn" id="de-fermer">Fermer</button></div>`);
+}
+async function chercherAdresse(q) {
+  const res = $('de-res'); if (!res) return;
+  res.innerHTML = '<p class="aide-texte">Recherche…</p>';
+  try {
+    const j = await lireJson(`${API_BAN}?${new URLSearchParams({ q, limit: '5' })}`);
+    const fs = j.features || [];
+    res.innerHTML = fs.length ? `<div class="liste-cases">${fs.map((f, k) => `<label><input type="radio" name="de-r" data-k="${k}"><span>${esc(f.properties.label)}</span></label>`).join('')}</div>` : '<p class="aide-texte">Aucun résultat.</p>';
+    res._resultats = fs;
+  } catch (e) { res.innerHTML = `<p class="aide-texte">Service d’adresses injoignable (${esc(e.message || e)}). Cliquez plutôt sur la carte.</p>`; }
+}
+
+// --- export
+function ouvrirExport() {
+  ouvrirPop($('b-export'), `<h3>Exporter</h3>
+    <button class="btn" data-export="png">${ic('image')}Image PNG de la carte</button>
+    <button class="btn" data-export="csv-etabs">${ic('file-down')}CSV des établissements (avec coordonnées)</button>
+    <button class="btn" data-export="csv-pers">${ic('file-down')}CSV des personnes affichées</button>
+    <button class="btn" data-export="imprimer">${ic('printer')}Imprimer (A4 paysage, avec légende)</button>`, 300);
+}
+function csv(rows) { return '﻿' + rows.map(r => r.map(v => { const s = String(v ?? ''); return /[;"\n\r]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; }).join(';')).join('\r\n'); }
+function telecharger(nom, contenu, type = 'text/csv;charset=utf-8') {
+  const blob = contenu instanceof Blob ? contenu : new Blob([contenu], { type });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nom;
+  document.body.appendChild(a); a.click();
+  setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 1500);
+}
+const date = () => new Date().toISOString().slice(0, 10);
+function csvEtabs() {
+  const t = [['UAI', 'Établissement', 'Commune', 'Type', 'Secteur', 'Département', 'Latitude', 'Longitude', 'Personnes', ...(depart ? [`Distance de ${depart.nom} (km)`] : [])]];
+  for (const e of trierEtabs()) t.push([e.uai, e.nom, e.commune, e.typeLib, e.secteur, e.dep, e.lat, e.lon, e.n, ...(depart ? [Math.round(e.dist * 10) / 10] : [])]);
+  return csv(t);
+}
+function csvPersonnes() {
+  const cols = colonnesTable;
+  const t = [[...cols, 'Établissement', 'Commune', 'Latitude', 'Longitude']];
+  for (const e of trierEtabs()) for (const p of e.pers) t.push([...cols.map(c => texte(p.rec[c])), e.nom, e.commune, e.lat, e.lon]);
+  return csv(t);
+}
+function dessinerLegende(g, k) {
+  const pad = 10 * k, lh = 18 * k, items = categories.filter(c => !masquees.has(c.cle)).slice(0, 14);
+  g.font = `600 ${13 * k}px Inter, system-ui, sans-serif`;
+  const titre = colonneCouleurActive() || 'Personnes';
+  let w = g.measureText(titre).width;
+  g.font = `${12 * k}px Inter, system-ui, sans-serif`;
+  for (const c of items) w = Math.max(w, g.measureText(`${c.lib} (${c.n})`).width + 20 * k);
+  const h = pad * 2 + lh * (items.length + 1);
+  g.fillStyle = 'rgba(255,255,255,.94)'; g.strokeStyle = '#d1d5db'; g.lineWidth = k;
+  g.beginPath(); g.roundRect ? g.roundRect(pad, pad, w + pad * 2, h, 8 * k) : g.rect(pad, pad, w + pad * 2, h); g.fill(); g.stroke();
+  g.fillStyle = '#1f2937'; g.font = `600 ${13 * k}px Inter, system-ui, sans-serif`; g.fillText(titre, pad * 2, pad + lh * .9);
+  g.font = `${12 * k}px Inter, system-ui, sans-serif`;
+  items.forEach((c, i) => {
+    const y = pad + lh * (i + 1.5);
+    g.fillStyle = c.couleur; g.beginPath(); g.arc(pad * 2 + 6 * k, y, 6 * k, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = '#1f2937'; g.fillText(`${c.lib} (${c.n})`, pad * 2 + 18 * k, y + 4 * k);
+  });
+}
+function exporterPng() {
+  if (!map) return toast('Carte indisponible.');
+  const src = map.getCanvas(), k = src.width / src.clientWidth;
+  const cv = document.createElement('canvas'); cv.width = src.width; cv.height = src.height;
+  const g = cv.getContext('2d');
+  try { g.drawImage(src, 0, 0); } catch (e) { /* fond indisponible */ }
+  for (const m of Object.values(marqueurs)) {
+    const el = m.getElement(), q = map.project(m.getLngLat()), x = q.x * k, y = q.y * k;
+    if (el.dataset.groupe) {
+      const r = (el.offsetWidth || 40) / 2 * k;
+      g.fillStyle = 'rgba(51,193,232,.25)'; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.fill();
+      g.fillStyle = '#33c1e8'; g.beginPath(); g.arc(x, y, r - 5 * k, 0, 2 * Math.PI); g.fill();
+      g.fillStyle = '#06303d'; g.font = `700 ${12 * k}px Inter, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(el.dataset.n, x, y + 4 * k); g.textAlign = 'left';
+      continue;
+    }
+    const e = parUai.get(el.dataset.uai); if (!e) continue;
+    const r = taillePoint(e.n) / 2 * k, tot = e.parts.reduce((s, p) => s + p.n, 0);
+    let a = -Math.PI / 2;
+    const parts = reglages.couleur.mode === 'majoritaire' ? [e.parts[0]] : e.parts;
+    for (const p of parts) { const da = (parts.length === 1 ? 1 : p.n / tot) * 2 * Math.PI; g.fillStyle = p.c; g.beginPath(); g.moveTo(x, y); g.arc(x, y, r, a, a + da); g.closePath(); g.fill(); a += da; }
+    g.strokeStyle = '#fff'; g.lineWidth = 2 * k; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.stroke();
+    if (e.n > 1) { g.fillStyle = '#1f2937'; g.beginPath(); g.arc(x + r, y - r, 9 * k, 0, 2 * Math.PI); g.fill(); g.fillStyle = '#fff'; g.font = `700 ${11 * k}px Inter, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(String(e.n), x + r, y - r + 4 * k); g.textAlign = 'left'; }
+  }
+  dessinerLegende(g, k);
+  g.fillStyle = 'rgba(31,41,55,.8)'; g.font = `${10 * k}px Inter, system-ui, sans-serif`; g.fillText('© OpenFreeMap © OpenStreetMap — Carto-profs', 10 * k, cv.height - 8 * k);
+  cv.toBlob(b => { if (b) telecharger(`carto-profs-${date()}.png`, b, 'image/png'); else toast('Image impossible à produire.'); });
+}
+function imprimer() {
+  const c = colonneCouleurActive();
+  $('impression').innerHTML = `<h1>${esc(nomTable || 'Carto-profs')}</h1><div>${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${c ? ` · couleurs : ${esc(c)}` : ''}${filtre ? ` · filtre sur ${esc(filtre.col)}` : ''} · ${new Date().toLocaleDateString('fr-FR')}</div>`;
+  const repl = legendeRepliee; legendeRepliee = false; rendreLegende();
+  if (map) map.resize();
+  setTimeout(() => { window.print(); legendeRepliee = repl; rendreLegende(); if (map) map.resize(); }, 250);
+}
+
+// --- mails
+let etatMail = null;
+// ids : personnes visées (par défaut la sélection) ; la fiche passe seulement ses personnes cochées.
+function ouvrirMail(qui, ids = null) {
+  const s = ids ? new Set(ids) : selection;
+  etatMail = { qui: qui || (s.size ? 'selection' : 'affichees'), ids: s, champ: 'cci', objet: etatMail ? etatMail.objet : '', corps: etatMail ? etatMail.corps : '' };
+  rendreMail();
+  chargerAnnuaire(destinataires(etatMail.qui, s).base.map(p => p.uai)).then(ch => { if (ch && !$('modale-fond').hidden && $('mail-lots')) rendreMail(true); });
+}
+function destinataires(qui, ids = selection) {
+  const base = qui === 'affichees' || (qui === 'etabs' && !ids.size) ? visibles : personnes.filter(p => ids.has(p.id));
+  const uais = [...new Set(base.map(p => p.uai).filter(Boolean))];
+  const unique = l => [...new Set(l.filter(Boolean))];
+  if (qui === 'etabs') return { principaux: unique(uais.map(mailEtab)), cc: [], sans: uais.filter(u => !mailEtab(u)).map(u => (parUai.get(u) || {}).nom || u), base };
+  const principaux = unique(base.map(mailPersonne));
+  const sans = base.filter(p => !mailPersonne(p)).map(nomPersonne);
+  return { principaux, cc: qui === 'mixte' ? unique(uais.map(mailEtab)) : [], sans, base };
+}
+function lots(liste, taille = LOT_MAIL) { const r = []; for (let i = 0; i < liste.length; i += taille) r.push(liste.slice(i, i + taille)); return r.length ? r : [[]]; }
+function lienMailto({ a = [], cc = [], cci = [], objet = '', corps = '' }) {
+  const q = [];
+  if (cc.length) q.push('cc=' + cc.join(','));
+  if (cci.length) q.push('bcc=' + cci.join(','));
+  if (objet) q.push('subject=' + encodeURIComponent(objet));
+  if (corps) q.push('body=' + encodeURIComponent(corps));
+  return 'mailto:' + a.join(',') + (q.length ? '?' + q.join('&') : '');
+}
+function liensMail(d, champ, objet, corps) {
+  return lots(d.principaux).map((l, i, tous) => {
+    const o = { objet: tous.length > 1 && objet ? `${objet} (${i + 1}/${tous.length})` : objet, corps, cc: d.cc };
+    if (champ === 'a') o.a = l; else if (champ === 'cc') o.cc = [...l, ...d.cc]; else o.cci = l;
+    return lienMailto(o);
+  });
+}
+function rendreMail(garderTexte = false) {
+  const s = etatMail, nSel = s.ids.size;
+  if (garderTexte && $('mail-objet')) { s.objet = $('mail-objet').value; s.corps = $('mail-corps').value; }
+  const d = destinataires(s.qui, s.ids), liens = liensMail(d, s.champ, s.objet, s.corps);
+  const nE = new Set(personnes.filter(p => s.ids.has(p.id)).map(p => p.uai)).size;
+  const choix = (v, titre, sous, off) => `<label class="choix${off ? ' desactive' : ''}"><input type="radio" name="mail-qui" value="${v}" ${s.qui === v ? 'checked' : ''} ${off ? 'disabled' : ''}><span><b>${titre}</b><span class="sous">${sous}</span></span></label>`;
+  const aca = academieProbable();
+  ouvrirModale(`${teteModale('mail', 'Écrire un mail', 'Le message s’ouvre dans votre messagerie habituelle')}
+    <fieldset style="border:0;margin:0;padding:0;display:flex;flex-direction:column;gap:6px"><legend style="font-weight:600;margin-bottom:6px">À qui ?</legend>
+      ${choix('selection', nSel > 1 ? `Les ${nSel} personnes de la sélection` : nSel ? 'La personne de la sélection' : 'La sélection', nSel ? 'cochées dans les fiches ou entourées sur la carte' : 'aucune sélection pour l’instant', !nSel)}
+      ${choix('affichees', visibles.length > 1 ? `Les ${visibles.length} personnes affichées` : 'La personne affichée', 'toutes celles que montrent la carte et ses filtres')}
+      ${choix('etabs', nSel ? (nE > 1 ? `Les ${nE} établissements de la sélection` : 'L’établissement de la sélection') : (etabs.length > 1 ? `Les ${etabs.length} établissements affichés` : 'L’établissement affiché'), `adresse de l’établissement (annuaire de l’éducation, sinon ce.UAI@${esc(domaineAcademie(aca))})`)}
+      ${choix('mixte', 'Les personnes, avec leur établissement en copie', 'pour une convocation ou une information officielle')}
+    </fieldset>
+    <div class="rangee"><span style="font-weight:600">Adresses en</span>
+      ${[['cci', 'Cci (cachées)'], ['a', 'À'], ['cc', 'Cc']].map(([v, l]) => `<button class="puce" data-champ="${v}" aria-pressed="${s.champ === v}">${l}</button>`).join('')}
+      <span class="aide-texte">${s.champ === 'cci' ? 'chacun·e ne voit pas les autres adresses' : 'tout le monde voit toutes les adresses'}</span></div>
+    <div><b>${pluriel(d.principaux.length, 'adresse', 'adresses')}</b>${d.cc.length ? ` + ${pluriel(d.cc.length, 'établissement', 'établissements')} en copie` : ''}</div>
+    <div class="adresses">${[...d.principaux, ...d.cc].slice(0, 60).map(a => `<span>${esc(a)}</span>`).join('')}${d.principaux.length + d.cc.length > 60 ? `<span>… ${d.principaux.length + d.cc.length - 60} de plus</span>` : ''}</div>
+    ${d.sans.length ? `<div class="alerte">Sans adresse, donc pas dans la liste : ${esc(d.sans.slice(0, 8).join(', '))}${d.sans.length > 8 ? ` et ${d.sans.length - 8} autres` : ''}.${!col('Mail') && s.qui !== 'etabs' ? ' Aucune colonne mail n’est reconnue : bouton Colonnes.' : ''}</div>` : ''}
+    <label class="champ"><span>Objet</span><input type="text" id="mail-objet" value="${esc(s.objet)}"></label>
+    <label class="champ"><span>Message <span style="font-weight:400;color:var(--doux)">(facultatif, modifiable ensuite dans la messagerie)</span></span><textarea id="mail-corps" rows="4">${esc(s.corps)}</textarea></label>
+    ${liens.length > 1 ? `<div class="aide-texte">Plus de ${LOT_MAIL} adresses : l’envoi est découpé en ${liens.length} lots (limite des messageries). Ouvrez-les l’un après l’autre.</div>` : ''}
+    <div class="rangee fin" id="mail-lots">
+      <button class="btn" id="mail-copier" ${d.principaux.length ? '' : 'disabled'}>${ic('copy')}Copier les adresses</button>
+      ${d.principaux.length ? liens.map((h, i) => `<a class="btn primaire" data-mailto href="${esc(h)}" target="_blank" rel="noopener">${ic('send')}${liens.length > 1 ? `Lot ${i + 1} sur ${liens.length}` : 'Ouvrir ma messagerie'}</a>`).join('') : '<span class="btn primaire inactif">Aucune adresse</span>'}
+    </div>`);
+}
+async function copier(texteACopier) {
+  try { await navigator.clipboard.writeText(texteACopier); }
+  catch (e) { const t = document.createElement('textarea'); t.value = texteACopier; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e2) { /* rien */ } t.remove(); }
+}
+async function copierAdresses(qui = 'selection') {
+  const d = destinataires(qui);
+  if (!d.principaux.length) return toast('Aucune adresse à copier.');
+  await copier(d.principaux.join('; '));
+  toast(`${pluriel(d.principaux.length, 'adresse copiée', 'adresses copiées')}. Collez-les dans votre messagerie (de préférence en Cci).`);
+}
+
+// ------------------------------------------------------------------------------------------------ recherche
+let resultats = [], resIdx = -1;
+function chercher(q) {
+  const n = sansAccents(q.trim());
+  const zone = $('resultats');
+  if (n.length < 2) { zone.hidden = true; $('recherche').setAttribute('aria-expanded', 'false'); return; }
+  resultats = [];
+  const cNom = col('Nom'), cPre = col('Prenom');
+  for (const e of etabs) if (sansAccents(e.nom).includes(n) || e.uai.toLowerCase().includes(n)) resultats.push({ t: 'etab', lib: e.nom, sous: [e.commune, pluriel(e.n, 'personne', 'personnes')].join(' · '), uai: e.uai });
+  for (const e of etabs) for (const p of e.pers) {
+    const nm = [cNom && texte(p.rec[cNom]), cPre && texte(p.rec[cPre])].filter(Boolean).join(' ');
+    if (nm && (sansAccents(nm).includes(n) || sansAccents([cPre && texte(p.rec[cPre]), cNom && texte(p.rec[cNom])].join(' ')).includes(n))) resultats.push({ t: 'pers', lib: nm, sous: e.nom, uai: e.uai, id: p.id });
+  }
+  const communes = new Map();
+  for (const e of etabs) if (e.commune && sansAccents(e.commune).includes(n)) { if (!communes.has(e.commune)) communes.set(e.commune, []); communes.get(e.commune).push(e); }
+  for (const [c, l] of communes) resultats.push({ t: 'commune', lib: c, sous: pluriel(l.length, 'établissement', 'établissements'), liste: l });
+  const ordre = { pers: 0, etab: 1, commune: 2 };
+  resultats.sort((a, b) => ordre[a.t] - ordre[b.t]); resultats = resultats.slice(0, 12); resIdx = resultats.length ? 0 : -1;
+  rendreResultats();
+}
+function rendreResultats() {
+  const zone = $('resultats'), icone = { etab: 'pin', pers: 'search', commune: 'route' };
+  zone.innerHTML = resultats.length ? resultats.map((r, i) => `<button role="option" id="res-${i}" data-res="${i}" aria-selected="${i === resIdx}">${ic(r.t === 'pers' ? 'message' : r.t === 'commune' ? 'pin' : 'columns')}<span><span>${esc(r.lib)}</span><br><span class="sous">${{ pers: 'Personne', etab: 'Établissement', commune: 'Commune' }[r.t]} · ${esc(r.sous)}</span></span></button>`).join('')
+    : '<div class="vide">Aucun résultat parmi les points affichés.</div>';
+  void icone;
+  zone.hidden = false; $('recherche').setAttribute('aria-expanded', 'true');
+  $('recherche').setAttribute('aria-activedescendant', resIdx >= 0 ? `res-${resIdx}` : '');
+}
+function choisirResultat(i) {
+  const r = resultats[i]; if (!r) return;
+  $('resultats').hidden = true; $('recherche').setAttribute('aria-expanded', 'false');
+  if (r.t === 'commune') { cadrer(r.liste); return; }
+  const e = parUai.get(r.uai);
+  if (map && e) map.flyTo({ center: [e.lon, e.lat], zoom: Math.max(map.getZoom(), 12.5) });
+  ouvrirFiche(r.uai, r.id || null);
+}
+
+// ------------------------------------------------------------------------------------------------ tableau de bord + liste
+let triTab = { col: 'n', sens: -1 };
+function trierEtabs() {
+  const k = triTab.col, s = triTab.sens;
+  return [...etabs].sort((a, b) => {
+    const x = a[k], y = b[k];
+    if (typeof x === 'number' || typeof y === 'number') return ((x ?? Infinity) - (y ?? Infinity)) * s || a.nom.localeCompare(b.nom, 'fr');
+    return String(x || '').localeCompare(String(y || ''), 'fr') * s;
+  });
+}
+function barres(titre, paires, couleur) {
+  const max = Math.max(1, ...paires.map(p => p[1]));
+  return `<section class="bloc"><h2>${esc(titre)}</h2>${paires.map(([nom, n, c]) => `<div class="barre-h"><span class="nom" title="${esc(nom)}">${esc(nom)}</span>
+    <div class="piste" role="img" aria-label="${esc(nom)} : ${n}"><div style="width:${Math.round(n / max * 100)}%;background:${esc(c || couleur)}"></div></div><span class="v">${n}</span></div>`).join('') || '<p class="aide-texte">Rien à compter.</p>'}</section>`;
+}
+function rendreTableau() {
+  const compte = f => { const m = new Map(); for (const e of etabs) { const k = f(e) || 'Inconnu'; m.set(k, (m.get(k) || 0) + e.n); } return [...m.entries()].sort((a, b) => b[1] - a[1]); };
+  const cats = categories.filter(c => !masquees.has(c.cle)).map(c => [c.lib, c.n, c.couleur]);
+  const tri = (k, l) => `<th aria-sort="${triTab.col === k ? (triTab.sens > 0 ? 'ascending' : 'descending') : 'none'}"><button data-tri="${k}">${l}${ic('sort', 'width:12px;height:12px')}</button></th>`;
+  const liste = trierEtabs();
+  const tousCoches = liste.length && liste.every(e => e.pers.every(p => selection.has(p.id)));
+  $('tableau').innerHTML = `<div class="tableau-int">
+    <div class="rangee"><button class="btn" id="tab-retour">${ic('back')}Carte</button><h1>Tableau de bord</h1>
+      <span style="color:var(--doux)">${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtre || masquees.size ? ' · filtres de la carte appliqués' : ''}</span>
+      <span style="flex:1"></span><button class="btn" data-export="csv-etabs">${ic('file-down')}CSV</button></div>
+    <div class="blocs">${barres('Par département', compte(e => e.dep), '#33c1e8')}${barres('Par type d’établissement', compte(e => e.typeLib), '#64748b')}${barres(`Par catégorie (${colonneCouleurActive() || 'aucune'})`, cats)}</div>
+    <section class="bloc" id="liste-etabs" aria-label="Liste des établissements">
+      <div class="rangee"><h2>Liste des établissements</h2><span class="aide-texte">alternative à la carte : Tab pour avancer, Entrée sur un nom pour ouvrir sa fiche</span><span style="flex:1"></span>
+        <button class="btn primaire" id="tab-ecrire" ${selection.size ? '' : 'disabled'}>${ic('mail')}${selection.size ? `Écrire aux ${pluriel(selection.size, 'personne', 'personnes')} de la sélection…` : 'Cochez des établissements pour écrire'}</button></div>
+      <div class="boite-tab"><table class="liste"><thead><tr><th><input type="checkbox" id="tab-tous" ${tousCoches ? 'checked' : ''} aria-label="Tout cocher"></th>
+        ${tri('nom', 'Établissement')}${tri('commune', 'Commune')}${tri('typeLib', 'Type')}${tri('dep', 'Département')}${tri('n', 'Personnes')}${depart ? tri('dist', `Distance (${esc(depart.nom)})`) : ''}</tr></thead>
+        <tbody>${liste.map(e => `<tr><td><input type="checkbox" data-tab-uai="${esc(e.uai)}" ${e.pers.every(p => selection.has(p.id)) ? 'checked' : ''} aria-label="Cocher ${esc(e.nom)}"></td>
+          <td><button class="nom-etab" data-ouvrir="${esc(e.uai)}">${esc(e.nom)}</button></td><td>${esc(e.commune)}</td><td>${esc(e.typeLib)}</td><td>${esc(e.dep)}</td>
+          <td><span class="rangee" style="gap:6px;flex-wrap:nowrap"><span class="pastille" style="width:10px;height:10px;border:0;background:${esc(fondPoint(e.parts))}"></span>${e.n}</span></td>
+          ${depart ? `<td>${e.dist != null ? fmtKm(e.dist) : ''}</td>` : ''}</tr>`).join('')}</tbody></table></div>
+    </section></div>`;
+}
+function ouvrirTableau(versListe = false) {
+  fermerPop(); $('tableau').hidden = false; rendreTableau();
+  if (versListe) { const l = $('liste-etabs'); l.scrollIntoView(); const p = l.querySelector('button, input'); if (p) p.focus(); }
+  else $('tab-retour').focus();
+}
+function fermerTableau() { $('tableau').hidden = true; if (map) map.resize(); }
+
+// ------------------------------------------------------------------------------------------------ présentation
+function basculerPresentation(on = !document.body.classList.contains('presentation')) {
+  document.body.classList.toggle('presentation', on);
+  $('quitter-presentation').hidden = !on;
+  fermerPop(); fermerFiche();
+  try {
+    if (on && document.documentElement.requestFullscreen && !document.fullscreenElement) document.documentElement.requestFullscreen().catch(() => {});
+    if (!on && document.fullscreenElement) document.exitFullscreen().catch(() => {});
+  } catch (e) { /* plein écran refusé par le navigateur : menus masqués seulement */ }
+  setTimeout(() => map && map.resize(), 200);
+}
+
+// ------------------------------------------------------------------------------------------------ visite guidée
+const VISITE = [
+  { cible: '#zone-recherche', titre: 'Rechercher', texte: 'Tapez un nom, un établissement ou une commune : la carte s’y place et ouvre la fiche.' },
+  { cible: '#b-couleurs', titre: 'Colorier selon…', texte: 'Choisissez la colonne qui donne la couleur des points (grade, discipline, groupe…). Le widget vous propose les bonnes colonnes.' },
+  { cible: '#b-bulles', titre: 'Contenu des bulles', texte: 'Choisissez ce que montrent le survol et la fiche : colonnes, ordre, modèle de ligne, avec un aperçu.' },
+  { cible: '#legende', titre: 'Légende', texte: 'Cliquez une catégorie pour la masquer ou la montrer. « Fond d’établissements » ajoute en gris tous les établissements de l’académie.' },
+  { cible: '#carte', titre: 'Les points', texte: 'Un point par établissement, en camembert si les couleurs se mêlent ; le badge donne le nombre de personnes. Survolez pour le nom, cliquez pour la fiche.' },
+  { cible: '#b-selection', titre: 'Sélection et mails', texte: 'Entourez des établissements, ou cochez des personnes dans les fiches, puis « Écrire… » : à une personne, un établissement ou toute une sélection.' },
+  { cible: '#groupe-vues', titre: 'Tableau de bord et exports', texte: 'Comptes par département et par type, liste accessible au clavier, image PNG, CSV, impression A4, mode présentation, thème.' },
+  { cible: '#b-aide', titre: 'Besoin d’aide ?', texte: 'Ce bouton relance la visite, ouvre le tutoriel et liste les nouveautés.' }
+];
+let etapeVisite = -1;
+function lancerVisiteSiBesoin() {
+  const v = local.lire('visite', { n: 0, finie: false });
+  if (v.finie || v.n >= 3 || !$('modale-fond').hidden) return;
+  v.n++; local.ecrire('visite', v); lancerVisite();
+}
+function lancerVisite() { fermerModale(); fermerPop(); $('menu-aide').hidden = true; etapeVisite = 0; rendreVisite(); }
+function finirVisite(definitif) {
+  etapeVisite = -1; $('visite').hidden = true; $('visite-halo').hidden = true;
+  if (definitif) { const v = local.lire('visite', { n: 0 }); v.finie = true; local.ecrire('visite', v); }
+}
+function rendreVisite() {
+  const s = VISITE[etapeVisite]; if (!s) return finirVisite(true);
+  const cible = document.querySelector(s.cible);
+  const v = $('visite'), h = $('visite-halo');
+  v.innerHTML = `<div class="etape">${etapeVisite + 1} sur ${VISITE.length}</div><h3 id="visite-titre">${esc(s.titre)}</h3><p>${esc(s.texte)}</p>
+    <div class="rangee"><button class="lien-btn" id="vi-jamais">Ne plus montrer</button><span style="flex:1"></span>
+      ${etapeVisite ? '<button class="btn petit" id="vi-prec">Précédent</button>' : ''}<button class="btn petit primaire" id="vi-suiv">${etapeVisite === VISITE.length - 1 ? 'Terminer' : 'Suivant'}</button></div>`;
+  v.hidden = false;
+  const W = innerWidth, H = innerHeight, m = 8, w = Math.min(300, W - 2 * m);
+  v.style.width = w + 'px';
+  let r = cible && !cible.hidden ? cible.getBoundingClientRect() : null;
+  if (r && (r.width === 0 || r.height === 0)) r = null;
+  const grand = r && r.width > W * .7 && r.height > H * .7;
+  if (r && !grand) { h.hidden = false; Object.assign(h.style, { left: (r.left - 4) + 'px', top: (r.top - 4) + 'px', width: (r.width + 8) + 'px', height: (r.height + 8) + 'px' }); }
+  else h.hidden = true;
+  const vh = v.offsetHeight;
+  let x, y;
+  if (!r || grand) { x = (W - w) / 2; y = (H - vh) / 2; }
+  else {
+    x = r.left + r.width / 2 - w / 2;
+    y = r.bottom + 12;
+    if (y + vh > H - m) y = r.top - vh - 12;
+    if (y < m) { y = Math.min(H - vh - m, r.top + 12); x = r.right + 12 + w > W - m ? r.left - w - 12 : r.right + 12; }
+  }
+  v.style.left = Math.max(m, Math.min(x, W - w - m)) + 'px';
+  v.style.top = Math.max(m, Math.min(y, H - vh - m)) + 'px';
+  $('vi-suiv').focus();
+}
+
+// ------------------------------------------------------------------------------------------------ événements
+document.querySelectorAll('[data-ic]').forEach(el => { el.outerHTML = ic(el.dataset.ic); });
+$('b-couleurs').onclick = ouvrirCouleurs;
+$('b-bulles').onclick = ouvrirBulles;
+$('b-filtre').onclick = ouvrirFiltre;
+$('b-depart').onclick = ouvrirDepart;
+$('b-selection').onclick = () => basculerModeSelection();
+$('b-tableau').onclick = () => ouvrirTableau(false);
+$('b-liste').onclick = () => ouvrirTableau(true);
+$('b-export').onclick = ouvrirExport;
+$('b-presentation').onclick = () => basculerPresentation(true);
+$('quitter-presentation').onclick = () => basculerPresentation(false);
+$('b-colonnes').onclick = () => ouvrirColonnes(false);
+$('b-theme').onclick = () => { theme = { auto: 'clair', clair: 'sombre', sombre: 'auto' }[theme] || 'auto'; local.ecrire('theme', theme); appliquerTheme(); toast(`Thème : ${theme === 'auto' ? 'automatique' : theme}`, 1800); };
+matchMedia('(prefers-color-scheme: dark)').addEventListener('change', appliquerTheme);
+$('b-aide').onclick = ev => { ev.stopPropagation(); const m = $('menu-aide'); m.hidden = !m.hidden; $('b-aide').setAttribute('aria-expanded', String(!m.hidden)); if (!m.hidden) m.querySelector('button').focus(); };
+$('menu-aide').onclick = ev => {
+  const b = ev.target.closest('[data-aide]'); if (!b) return;
+  $('menu-aide').hidden = true; $('b-aide').setAttribute('aria-expanded', 'false');
+  if (b.dataset.aide === 'visite') lancerVisite();
+  if (b.dataset.aide === 'tuto') window.open(new URL('tuto.html', location.href).href, '_blank', 'noopener');
+  if (b.dataset.aide === 'neuf') ouvrirModale(`${teteModale('sparkles', 'Quoi de neuf ?', `Version ${VERSION}`)}
+    ${NOUVEAUTES.map(n => `<div><b>${esc(n.version)}</b> <span class="aide-texte">${esc(n.date)}</span><ul>${n.points.map(p => `<li>${esc(p)}</li>`).join('')}</ul></div>`).join('')}
+    <div class="rangee fin"><button class="btn primaire" data-fermer>Fermer</button></div>`);
+};
+document.addEventListener('click', ev => {
+  if (!$('menu-aide').hidden && !ev.target.closest('#menu-aide, #b-aide')) { $('menu-aide').hidden = true; $('b-aide').setAttribute('aria-expanded', 'false'); }
+  if (!$('pop').hidden && !ev.target.closest('#pop') && !ev.target.closest('.barre')) fermerPop();
+  if (!$('resultats').hidden && !ev.target.closest('#zone-recherche')) $('resultats').hidden = true;
+});
+document.addEventListener('keydown', ev => {
+  if (ev.key !== 'Escape') return;
+  if (etapeVisite >= 0) return finirVisite(false);
+  if (!$('modale-fond').hidden) return fermerModale();
+  if (!$('pop').hidden) { const b = popPour; fermerPop(); if (b) b.focus(); return; }
+  if (!$('menu-aide').hidden) { $('menu-aide').hidden = true; return $('b-aide').focus(); }
+  if (modeSel) return basculerModeSelection(false);
+  if (modeDepartClic) { modeDepartClic = false; document.body.classList.remove('mode-depart'); return; }
+  if (document.body.classList.contains('presentation')) return basculerPresentation(false);
+  if (!$('tableau').hidden) return fermerTableau();
+  if (ficheUai) return fermerFiche();
+});
+// recherche
+$('recherche').addEventListener('input', ev => chercher(ev.target.value));
+$('recherche').addEventListener('keydown', ev => {
+  if ($('resultats').hidden) return;
+  if (ev.key === 'ArrowDown') { resIdx = Math.min(resultats.length - 1, resIdx + 1); rendreResultats(); ev.preventDefault(); }
+  if (ev.key === 'ArrowUp') { resIdx = Math.max(0, resIdx - 1); rendreResultats(); ev.preventDefault(); }
+  if (ev.key === 'Enter') { choisirResultat(resIdx); ev.preventDefault(); }
+});
+$('resultats').addEventListener('click', ev => { const b = ev.target.closest('[data-res]'); if (b) choisirResultat(+b.dataset.res); });
+// légende
+$('legende').addEventListener('click', ev => {
+  const it = ev.target.closest('[data-cat]');
+  if (it) { const k = it.dataset.cat; masquees.has(k) ? masquees.delete(k) : masquees.add(k); recalculer(); const n = $('legende').querySelector(`[data-cat="${CSS.escape(k)}"]`); if (n) n.focus(); return; }
+  if (ev.target.closest('#leg-replier')) { legendeRepliee = !legendeRepliee; rendreLegende(); $('leg-replier').focus(); return; }
+  const t = ev.target.closest('[data-type]');
+  if (t) { const f = reglages.fond, k = t.dataset.type; f.types = f.types.includes(k) ? f.types.filter(x => x !== k) : [...f.types, k]; sauver(); rendreLegende(); majFond(); return; }
+  const s = ev.target.closest('[data-secteur]');
+  if (s) { const f = reglages.fond, k = s.dataset.secteur; f.secteurs = f.secteurs.includes(k) ? f.secteurs.filter(x => x !== k) : [...f.secteurs, k]; sauver(); rendreLegende(); majFond(); }
+});
+$('legende').addEventListener('change', ev => {
+  if (ev.target.id === 'c-regrouper') { reglages.regrouper = ev.target.checked; sauver(); rebatirSourceEtabs(); }
+  if (ev.target.id === 'c-fond') { reglages.fond.actif = ev.target.checked; sauver(); rendreLegende(); chargerFond(); }
+  if (ev.target.id === 'c-academie') { reglages.fond.academie = ev.target.value; sauver(); chargerFond(); }
+});
+// statut, sélection
+$('statut').addEventListener('click', ev => {
+  if (ev.target.closest('#b-introuvables')) ouvrirColonnes(false);
+  if (ev.target.closest('#b-reessayer')) { erreurGeo = ''; geolocaliser(); }
+});
+$('barre-selection').addEventListener('click', ev => {
+  if (ev.target.closest('#sel-ecrire')) ouvrirMail('selection');
+  if (ev.target.closest('#sel-copier')) copierAdresses('selection');
+  if (ev.target.closest('#sel-vider')) { selection.clear(); apresSelection(); }
+});
+// fiche
+$('fiche').addEventListener('click', ev => {
+  if (ev.target.closest('#fiche-fermer')) return fermerFiche();
+  if (ev.target.closest('#fiche-ecrire')) {
+    const e = parUai.get(ficheUai);
+    ouvrirMail('selection', e.pers.filter(p => selection.has(p.id)).map(p => p.id));   // seulement les cochées de cette fiche
+    return;
+  }
+  const g = ev.target.closest('[data-grist]'); if (g) return voirDansGrist(+g.dataset.grist);
+});
+$('fiche').addEventListener('change', ev => {
+  const e = parUai.get(ficheUai); if (!e) return;
+  if (ev.target.id === 'fiche-tous') { e.pers.forEach(p => ev.target.checked ? selection.add(p.id) : selection.delete(p.id)); apresSelection(); return; }
+  const s = ev.target.dataset.sel;
+  if (s) { ev.target.checked ? selection.add(+s) : selection.delete(+s); apresSelection(); const n = $('fiche').querySelector(`[data-sel="${s}"]`); if (n) n.focus(); }
+});
+// popovers
+$('pop').addEventListener('change', ev => {
+  if (ev.target.id === 'fi-col') { rendreFiltre(ev.target.value); return; }
+  if (ev.target.dataset.fv != null) return lireFiltre();
+  if (ev.target.dataset.rayon) {
+    const r = [...$('pop').querySelectorAll('[data-rayon]')].filter(x => x.checked).map(x => +x.dataset.rayon);
+    if (depart) { depart.rayons = r; local.ecrire('depart', depart); majDepart(); }
+    return;
+  }
+  if (ev.target.name === 'de-r') {
+    const f = $('de-res')._resultats[+ev.target.dataset.k];
+    const r = [...$('pop').querySelectorAll('[data-rayon]')].filter(x => x.checked).map(x => +x.dataset.rayon);
+    definirDepart({ nom: f.properties.city || f.properties.label, lon: f.geometry.coordinates[0], lat: f.geometry.coordinates[1], rayons: r });
+    if (map) map.flyTo({ center: f.geometry.coordinates, zoom: 9 });
+    fermerPop();
+  }
+});
+$('pop').addEventListener('submit', ev => { ev.preventDefault(); if (ev.target.id === 'de-form') { const q = $('de-q').value.trim(); if (q.length >= 3) chercherAdresse(q); } });
+$('pop').addEventListener('click', ev => {
+  const id = ev.target.closest('button') && ev.target.closest('button').id;
+  if (id === 'fi-tout' || id === 'fi-rien') { $('pop').querySelectorAll('input[data-fv]').forEach(x => { x.checked = id === 'fi-tout'; }); lireFiltre(); }
+  if (id === 'fi-retirer') { filtre = null; masquees.clear(); recalculer(); rendreFiltre($('pop').dataset.col); }
+  if (id === 'fi-fermer' || id === 'de-fermer') fermerPop();
+  if (id === 'de-retirer') { definirDepart(null); fermerPop(); }
+  if (id === 'de-clic') { modeDepartClic = true; document.body.classList.add('mode-depart'); fermerPop(); toast('Cliquez sur la carte pour placer le point de départ.'); }
+  const ex = ev.target.closest('[data-export]'); if (ex) { fermerPop(); faireExport(ex.dataset.export); }
+});
+function faireExport(k) {
+  if (k === 'png') exporterPng();
+  if (k === 'csv-etabs') telecharger(`carto-profs-etablissements-${date()}.csv`, csvEtabs());
+  if (k === 'csv-pers') telecharger(`carto-profs-personnes-${date()}.csv`, csvPersonnes());
+  if (k === 'imprimer') imprimer();
+}
+// tableau
+$('tableau').addEventListener('click', ev => {
+  if (ev.target.closest('#tab-retour')) return fermerTableau();
+  if (ev.target.closest('#tab-ecrire')) return ouvrirMail('selection');
+  const ex = ev.target.closest('[data-export]'); if (ex) return faireExport(ex.dataset.export);
+  const t = ev.target.closest('[data-tri]');
+  if (t) { const k = t.dataset.tri; triTab = { col: k, sens: triTab.col === k ? -triTab.sens : (k === 'n' ? -1 : 1) }; rendreTableau(); const n = $('tableau').querySelector(`[data-tri="${k}"]`); if (n) n.focus(); return; }
+  const o = ev.target.closest('[data-ouvrir]');
+  if (o) { const u = o.dataset.ouvrir, e = parUai.get(u); fermerTableau(); if (map && e) map.flyTo({ center: [e.lon, e.lat], zoom: Math.max(map.getZoom(), 12) }); ouvrirFiche(u); const f = $('fiche-fermer'); if (f) f.focus(); }
+});
+$('tableau').addEventListener('change', ev => {
+  if (ev.target.id === 'tab-tous') { for (const e of etabs) e.pers.forEach(p => ev.target.checked ? selection.add(p.id) : selection.delete(p.id)); apresSelection(); return; }
+  const u = ev.target.dataset.tabUai;
+  if (u) { const e = parUai.get(u); e.pers.forEach(p => ev.target.checked ? selection.add(p.id) : selection.delete(p.id)); apresSelection(); const n = $('tableau').querySelector(`[data-tab-uai="${CSS.escape(u)}"]`); if (n) n.focus(); }
+});
+// modale
+$('modale-fond').addEventListener('click', ev => { if (ev.target === $('modale-fond') || ev.target.closest('[data-fermer]')) fermerModale(); });
+$('modale').addEventListener('click', ev => {
+  const b = ev.target.closest('button, a'); if (!b) return;
+  const id = b.id;
+  // couleurs
+  if (id === 'cc-suivant') { if (lireChoixCouleur()) { etapeCouleur = 2; rendreCouleurs(); } else toast('Choisissez une colonne.'); return; }
+  if (id === 'cc-retour') { etapeCouleur = 1; rendreCouleurs(); return; }
+  if (id === 'cc-appliquer') return appliquerCouleurs();
+  if (id === 'cc-raz') { brouillonCouleur.valeurs = {}; rendreCouleurs(); return; }
+  if (b.dataset.palette) { brouillonCouleur.palette = b.dataset.palette; brouillonCouleur.valeurs = {}; rendreCouleurs(); return; }
+  // bulles
+  if (b.dataset.onglet) { lireBulles(); ongletBulles = b.dataset.onglet; rendreBulles(); $('modale').querySelector(`[data-onglet="${ongletBulles}"]`).focus(); return; }
+  if (b.dataset.monter || b.dataset.descendre) {
+    ev.preventDefault();
+    const k = +(b.dataset.monter ?? b.dataset.descendre), d = b.dataset.monter != null ? -1 : 1, l = brouillonBulles.colonnes;
+    if (k + d < 0 || k + d >= l.length) return;
+    [l[k], l[k + d]] = [l[k + d], l[k]];
+    brouillonBulles.modele = modeleDepuisColonnes(l); rendreBulles();
+    const n = $('modale').querySelector(`[data-${d < 0 ? 'monter' : 'descendre'}="${k + d}"]`); if (n) n.focus();
+    return;
+  }
+  if (b.dataset.inserer) {
+    const inp = $('bu-modele'), t = `{${b.dataset.inserer}}`, a = inp.selectionStart ?? inp.value.length, z = inp.selectionEnd ?? a;
+    const avant = inp.value.slice(0, a), apres = inp.value.slice(z);
+    const ajout = (avant && !/\s$/.test(avant) ? ' ' : '') + t + (apres && !/^\s/.test(apres) ? ' ' : '');
+    inp.value = avant + ajout + apres; brouillonBulles.modele = inp.value; inp.focus(); inp.setSelectionRange(a + ajout.length, a + ajout.length); majApercuBulles();
+    return;
+  }
+  if (id === 'bu-exemple') { exempleIdx++; majApercuBulles(); return; }
+  if (id === 'bu-defaut') { brouillonBulles = { ...reglagesParDefaut().bulles }; brouillonBulles.modele = modeleParDefaut(); const dans = new Set((brouillonBulles.modele.match(/\{([^{}]+)\}/g) || []).map(x => x.slice(1, -1))); brouillonBulles.colonnes = [...[...dans].map(c => ({ c, on: true })), ...colonnesTable.filter(c => !dans.has(c)).map(c => ({ c, on: false }))]; rendreBulles(); return; }
+  if (id === 'bu-enregistrer') { lireBulles(); const nb = { ...brouillonBulles }; delete nb.colonnes; if (nb.modele === modeleParDefaut()) nb.modele = ''; reglages.bulles = nb; sauver(); fermerModale(); recalculer(); return; }
+  // colonnes
+  if (id === 'col-ok') return fermerModale();
+  if (id === 'col-vider') { geo = {}; annu = {}; local.oublier('geo'); local.oublier('annuaire'); toast('Copie vidée : les coordonnées sont redemandées à l’open data.'); fermerModale(); recalculer(); return; }
+  if (id === 'col-ecrire') return ecrireCoordonnees();
+  if (b.dataset.grist) return voirDansGrist(+b.dataset.grist);
+  // mails
+  if (b.dataset.champ) { etatMail.champ = b.dataset.champ; rendreMail(true); return; }
+  if (id === 'mail-copier') { const d = destinataires(etatMail.qui, etatMail.ids); copier([...d.principaux, ...d.cc].join('; ')).then(() => toast(`${pluriel(d.principaux.length + d.cc.length, 'adresse copiée', 'adresses copiées')}.`)); return; }
+});
+$('modale').addEventListener('change', ev => {
+  const t = ev.target;
+  if (t.type === 'color' && t.dataset.val != null) { t.dataset.touche = '1'; brouillonCouleur.valeurs[t.dataset.val] = t.value; return; }
+  if (t.name === 'mail-qui') { etatMail.qui = t.value; rendreMail(true); if (t.value === 'etabs' || t.value === 'mixte') chargerAnnuaire(destinataires(t.value, etatMail.ids).base.map(p => p.uai)).then(ch => { if (ch && $('mail-lots')) rendreMail(true); }); return; }
+  if (t.dataset.role) { reglages.colonnes[t.dataset.role] = t.value; sauver(); recalculer(); ouvrirColonnes(!reglages.configure); return; }
+  if (t.dataset.colon != null) { brouillonBulles.colonnes[+t.dataset.colon].on = t.checked; brouillonBulles.modele = modeleDepuisColonnes(brouillonBulles.colonnes); $('bu-modele').value = brouillonBulles.modele; majApercuBulles(); return; }
+  if (t.dataset.survol) { brouillonBulles.survol[t.dataset.survol] = t.checked; majApercuBulles(); return; }
+  if (t.dataset.opt) { brouillonBulles[t.dataset.opt] = t.checked; majApercuBulles(); return; }
+  if (t.id === 'bu-tri') { brouillonBulles.tri = t.value || null; return; }
+});
+$('modale').addEventListener('input', ev => {
+  if (ev.target.id === 'bu-modele') { brouillonBulles.modele = ev.target.value; majApercuBulles(); }
+  if (ev.target.id === 'mail-objet' || ev.target.id === 'mail-corps') {
+    etatMail.objet = $('mail-objet').value; etatMail.corps = $('mail-corps').value;
+    const d = destinataires(etatMail.qui, etatMail.ids), liens = liensMail(d, etatMail.champ, etatMail.objet, etatMail.corps);
+    $('modale').querySelectorAll('[data-mailto]').forEach((a, i) => { a.href = liens[i]; });
+  }
+});
+function lireBulles() { const m = $('bu-modele'); if (m) brouillonBulles.modele = m.value; }
+// visite
+$('visite').addEventListener('click', ev => {
+  const id = ev.target.closest('button') && ev.target.closest('button').id;
+  if (id === 'vi-suiv') { etapeVisite++; if (etapeVisite >= VISITE.length) finirVisite(true); else rendreVisite(); }
+  if (id === 'vi-prec') { etapeVisite = Math.max(0, etapeVisite - 1); rendreVisite(); }
+  if (id === 'vi-jamais') finirVisite(true);
+});
+// la barre d’outils peut passer sur plusieurs lignes : légende et fiche se placent dessous
+function placerPanneaux() {
+  const bas = Math.round($('barre').getBoundingClientRect().bottom) + 10;
+  $('legende').style.top = bas + 'px'; $('legende').style.maxHeight = `calc(100% - ${bas + 66}px)`;
+  if (innerWidth > 700) { $('fiche').style.top = bas + 'px'; $('fiche').style.maxHeight = `calc(100% - ${bas + 66}px)`; }
+  else { $('fiche').style.top = ''; $('fiche').style.maxHeight = ''; }
+}
+addEventListener('resize', () => { placerPanneaux(); if (etapeVisite >= 0) rendreVisite(); });
+new ResizeObserver(placerPanneaux).observe($('barre'));
+// garder le focus dans la fenêtre ouverte
+$('modale').addEventListener('keydown', ev => {
+  if (ev.key !== 'Tab') return;
+  const f = [...$('modale').querySelectorAll('button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea, summary')].filter(x => x.offsetParent);
+  if (!f.length) return;
+  if (ev.shiftKey && document.activeElement === f[0]) { f[f.length - 1].focus(); ev.preventDefault(); }
+  else if (!ev.shiftKey && document.activeElement === f[f.length - 1]) { f[0].focus(); ev.preventDefault(); }
+});
+
+// ------------------------------------------------------------------------------------------------ démarrage
+function premierDemarrage() {
+  if (demarre || !recuLignes || !recuOptions) return;
+  demarre = true;
+  if (DANS_GRIST && (!reglages.configure || !col('UAI'))) ouvrirColonnes(true);
+  else setTimeout(lancerVisiteSiBesoin, 600);
+}
+const DEMO = /*DEMO*/[{"Civilite":"Mme","Nom":"BONNET","Prenom":"Lina","mail_ouvert":"lina.bonnet@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459901A","EtabNom":"Collège des Tilleuls (fictif)","EtabCategorie":"CLG","EtabVille":"Orléans","EtabDepartement":"Loiret","Latitude":47.90768,"Longitude":1.9066},{"Civilite":"M.","Nom":"ROUSSEL","Prenom":"Bruno","mail_ouvert":"bruno.roussel@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459901A","EtabNom":"Collège des Tilleuls (fictif)","EtabCategorie":"CLG","EtabVille":"Orléans","EtabDepartement":"Loiret","Latitude":47.90768,"Longitude":1.9066},{"Civilite":"M.","Nom":"PERRIN","Prenom":"Éric","mail_ouvert":"eric.perrin@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459901A","EtabNom":"Collège des Tilleuls (fictif)","EtabCategorie":"CLG","EtabVille":"Orléans","EtabDepartement":"Loiret","Latitude":47.90768,"Longitude":1.9066},{"Civilite":"M.","Nom":"NOEL","Prenom":"Bruno","mail_ouvert":"bruno.noel@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459901A","EtabNom":"Collège des Tilleuls (fictif)","EtabCategorie":"CLG","EtabVille":"Orléans","EtabDepartement":"Loiret","Latitude":47.90768,"Longitude":1.9066},{"Civilite":"M.","Nom":"BERNARD","Prenom":"Théo","mail_ouvert":"theo.bernard@exemple.invalid","Grade":"Stagiaire","Statut":"Stagiaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459901A","EtabNom":"Collège des Tilleuls (fictif)","EtabCategorie":"CLG","EtabVille":"Orléans","EtabDepartement":"Loiret","Latitude":47.90768,"Longitude":1.9066},{"Civilite":"Mme","Nom":"LUCAS","Prenom":"Anaïs","mail_ouvert":"anais.lucas@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459902D","EtabNom":"Collège Pierre-Mendès (fictif)","EtabCategorie":"CLG","EtabVille":"Orléans","EtabDepartement":"Loiret","Latitude":47.89174,"Longitude":1.92735},{"Civilite":"M.","Nom":"HENRY","Prenom":"Louis","mail_ouvert":"louis.henry@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459903H","EtabNom":"Lycée professionnel des Remparts (fictif)","EtabCategorie":"LP","EtabVille":"Montargis","EtabDepartement":"Loiret","Latitude":47.98375,"Longitude":2.74064},{"Civilite":"M.","Nom":"BLANC","Prenom":"Adrien","mail_ouvert":"adrien.blanc@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0459904R","EtabNom":"Lycée polyvalent des Sablons (fictif)","EtabCategorie":"LPO","EtabVille":"Pithiviers","EtabDepartement":"Loiret","Latitude":48.16205,"Longitude":2.24938},{"Civilite":"Mme","Nom":"PETIT","Prenom":"Anaïs","mail_ouvert":"anais.petit@exemple.invalid","Grade":"Stagiaire","Statut":"Stagiaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0459904R","EtabNom":"Lycée polyvalent des Sablons (fictif)","EtabCategorie":"LPO","EtabVille":"Pithiviers","EtabDepartement":"Loiret","Latitude":48.16205,"Longitude":2.24938},{"Civilite":"Mme","Nom":"GARNIER","Prenom":"Inès","mail_ouvert":"ines.garnier@exemple.invalid","Grade":"Contractuel","Statut":"Non titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0459904R","EtabNom":"Lycée polyvalent des Sablons (fictif)","EtabCategorie":"LPO","EtabVille":"Pithiviers","EtabDepartement":"Loiret","Latitude":48.16205,"Longitude":2.24938},{"Civilite":"M.","Nom":"CHEVALIER","Prenom":"Bruno","mail_ouvert":"bruno.chevalier@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0459904R","EtabNom":"Lycée polyvalent des Sablons (fictif)","EtabCategorie":"LPO","EtabVille":"Pithiviers","EtabDepartement":"Loiret","Latitude":48.16205,"Longitude":2.24938},{"Civilite":"Mme","Nom":"HENRY","Prenom":"Chloé","mail_ouvert":"chloe.henry@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459904R","EtabNom":"Lycée polyvalent des Sablons (fictif)","EtabCategorie":"LPO","EtabVille":"Pithiviers","EtabDepartement":"Loiret","Latitude":48.16205,"Longitude":2.24938},{"Civilite":"M.","Nom":"BERNARD","Prenom":"Mehdi","mail_ouvert":"mehdi.bernard@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459904R","EtabNom":"Lycée polyvalent des Sablons (fictif)","EtabCategorie":"LPO","EtabVille":"Pithiviers","EtabDepartement":"Loiret","Latitude":48.16205,"Longitude":2.24938},{"Civilite":"Mme","Nom":"FAURE","Prenom":"Éva","mail_ouvert":"eva.faure@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459905Y","EtabNom":"Collège Victor-Hugo (fictif)","EtabCategorie":"CLG","EtabVille":"Gien","EtabDepartement":"Loiret","Latitude":47.7043,"Longitude":2.62667},{"Civilite":"M.","Nom":"GARNIER","Prenom":"Mehdi","mail_ouvert":"mehdi.garnier@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0459905Y","EtabNom":"Collège Victor-Hugo (fictif)","EtabCategorie":"CLG","EtabVille":"Gien","EtabDepartement":"Loiret","Latitude":47.7043,"Longitude":2.62667},{"Civilite":"Mme","Nom":"MARTIN","Prenom":"Nadia","mail_ouvert":"nadia.martin@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0459905Y","EtabNom":"Collège Victor-Hugo (fictif)","EtabCategorie":"CLG","EtabVille":"Gien","EtabDepartement":"Loiret","Latitude":47.7043,"Longitude":2.62667},{"Civilite":"Mme","Nom":"MARCHAND","Prenom":"Inès","mail_ouvert":"ines.marchand@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0459905Y","EtabNom":"Collège Victor-Hugo (fictif)","EtabCategorie":"CLG","EtabVille":"Gien","EtabDepartement":"Loiret","Latitude":47.7043,"Longitude":2.62667},{"Civilite":"M.","Nom":"LEFEBVRE","Prenom":"Mehdi","mail_ouvert":"mehdi.lefebvre@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0379901F","EtabNom":"Collège Jules-Ferry (fictif)","EtabCategorie":"CLG","EtabVille":"Tours","EtabDepartement":"Indre-et-Loire","Latitude":47.40269,"Longitude":0.70367},{"Civilite":"Mme","Nom":"FOURNIER","Prenom":"Manon","mail_ouvert":"manon.fournier@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0379901F","EtabNom":"Collège Jules-Ferry (fictif)","EtabCategorie":"CLG","EtabVille":"Tours","EtabDepartement":"Indre-et-Loire","Latitude":47.40269,"Longitude":0.70367},{"Civilite":"Mme","Nom":"ROCHE","Prenom":"Claire","mail_ouvert":"claire.roche@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0379902J","EtabNom":"Collège Sophie-Germain (fictif)","EtabCategorie":"CLG","EtabVille":"Tours","EtabDepartement":"Indre-et-Loire","Latitude":47.3991,"Longitude":0.69897},{"Civilite":"Mme","Nom":"LEFEBVRE","Prenom":"Sarah","mail_ouvert":"sarah.lefebvre@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0379902J","EtabNom":"Collège Sophie-Germain (fictif)","EtabCategorie":"CLG","EtabVille":"Tours","EtabDepartement":"Indre-et-Loire","Latitude":47.3991,"Longitude":0.69897},{"Civilite":"Mme","Nom":"FAURE","Prenom":"Zoé","mail_ouvert":"zoe.faure@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0379903N","EtabNom":"Collège de la Forêt (fictif)","EtabCategorie":"CLG","EtabVille":"Amboise","EtabDepartement":"Indre-et-Loire","Latitude":47.40138,"Longitude":0.9861},{"Civilite":"M.","Nom":"LAMBERT","Prenom":"Éric","mail_ouvert":"eric.lambert@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0379903N","EtabNom":"Collège de la Forêt (fictif)","EtabCategorie":"CLG","EtabVille":"Amboise","EtabDepartement":"Indre-et-Loire","Latitude":47.40138,"Longitude":0.9861},{"Civilite":"M.","Nom":"NOEL","Prenom":"Théo","mail_ouvert":"theo.noel@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0379903N","EtabNom":"Collège de la Forêt (fictif)","EtabCategorie":"CLG","EtabVille":"Amboise","EtabDepartement":"Indre-et-Loire","Latitude":47.40138,"Longitude":0.9861},{"Civilite":"M.","Nom":"PERRIN","Prenom":"Malik","mail_ouvert":"malik.perrin@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0379903N","EtabNom":"Collège de la Forêt (fictif)","EtabCategorie":"CLG","EtabVille":"Amboise","EtabDepartement":"Indre-et-Loire","Latitude":47.40138,"Longitude":0.9861},{"Civilite":"Mme","Nom":"GARNIER","Prenom":"Lina","mail_ouvert":"lina.garnier@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0379903N","EtabNom":"Collège de la Forêt (fictif)","EtabCategorie":"CLG","EtabVille":"Amboise","EtabDepartement":"Indre-et-Loire","Latitude":47.40138,"Longitude":0.9861},{"Civilite":"Mme","Nom":"PERRIN","Prenom":"Claire","mail_ouvert":"claire.perrin@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0379903N","EtabNom":"Collège de la Forêt (fictif)","EtabCategorie":"CLG","EtabVille":"Amboise","EtabDepartement":"Indre-et-Loire","Latitude":47.40138,"Longitude":0.9861},{"Civilite":"Mme","Nom":"PETIT","Prenom":"Amina","mail_ouvert":"amina.petit@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0379904W","EtabNom":"Lycée professionnel Ronsard (fictif)","EtabCategorie":"LP","EtabVille":"Chinon","EtabDepartement":"Indre-et-Loire","Latitude":47.16263,"Longitude":0.25481},{"Civilite":"M.","Nom":"MEYER","Prenom":"Mehdi","mail_ouvert":"mehdi.meyer@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0379904W","EtabNom":"Lycée professionnel Ronsard (fictif)","EtabCategorie":"LP","EtabVille":"Chinon","EtabDepartement":"Indre-et-Loire","Latitude":47.16263,"Longitude":0.25481},{"Civilite":"M.","Nom":"BRUN","Prenom":"Malik","mail_ouvert":"malik.brun@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0379904W","EtabNom":"Lycée professionnel Ronsard (fictif)","EtabCategorie":"LP","EtabVille":"Chinon","EtabDepartement":"Indre-et-Loire","Latitude":47.16263,"Longitude":0.25481},{"Civilite":"M.","Nom":"CLEMENT","Prenom":"Yanis","mail_ouvert":"yanis.clement@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0379905D","EtabNom":"Collège Olympe-de-Gouges (fictif)","EtabCategorie":"CLG","EtabVille":"Loches","EtabDepartement":"Indre-et-Loire","Latitude":47.11451,"Longitude":1.00478},{"Civilite":"M.","Nom":"MASSON","Prenom":"Éric","mail_ouvert":"eric.masson@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0419901L","EtabNom":"Lycée polyvalent Jean-Moulin (fictif)","EtabCategorie":"LPO","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.5872,"Longitude":1.33628},{"Civilite":"Mme","Nom":"PERRIN","Prenom":"Léa","mail_ouvert":"lea.perrin@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0419901L","EtabNom":"Lycée polyvalent Jean-Moulin (fictif)","EtabCategorie":"LPO","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.5872,"Longitude":1.33628},{"Civilite":"M.","Nom":"MASSON","Prenom":"Jonas","mail_ouvert":"jonas.masson@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0419901L","EtabNom":"Lycée polyvalent Jean-Moulin (fictif)","EtabCategorie":"LPO","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.5872,"Longitude":1.33628},{"Civilite":"Mme","Nom":"ROUSSEL","Prenom":"Manon","mail_ouvert":"manon.roussel@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0419901L","EtabNom":"Lycée polyvalent Jean-Moulin (fictif)","EtabCategorie":"LPO","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.5872,"Longitude":1.33628},{"Civilite":"Mme","Nom":"MARCHAND","Prenom":"Chloé","mail_ouvert":"chloe.marchand@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0419901L","EtabNom":"Lycée polyvalent Jean-Moulin (fictif)","EtabCategorie":"LPO","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.5872,"Longitude":1.33628},{"Civilite":"M.","Nom":"BERNARD","Prenom":"Bruno","mail_ouvert":"bruno.bernard@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0419901L","EtabNom":"Lycée polyvalent Jean-Moulin (fictif)","EtabCategorie":"LPO","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.5872,"Longitude":1.33628},{"Civilite":"Mme","Nom":"LAMBERT","Prenom":"Nadia","mail_ouvert":"nadia.lambert@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0419902P","EtabNom":"Collège Marie-Curie (fictif)","EtabCategorie":"CLG","EtabVille":"Blois","EtabDepartement":"Loir-et-Cher","Latitude":47.58503,"Longitude":1.3422},{"Civilite":"Mme","Nom":"LEROY","Prenom":"Anaïs","mail_ouvert":"anais.leroy@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0419903U","EtabNom":"Lycée Pierre-Mendès (fictif)","EtabCategorie":"LGT","EtabVille":"Vendôme","EtabDepartement":"Loir-et-Cher","Latitude":47.80228,"Longitude":1.07965},{"Civilite":"Mme","Nom":"MARCHAND","Prenom":"Amina","mail_ouvert":"amina.marchand@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0419903U","EtabNom":"Lycée Pierre-Mendès (fictif)","EtabCategorie":"LGT","EtabVille":"Vendôme","EtabDepartement":"Loir-et-Cher","Latitude":47.80228,"Longitude":1.07965},{"Civilite":"M.","Nom":"PETIT","Prenom":"Théo","mail_ouvert":"theo.petit@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0419903U","EtabNom":"Lycée Pierre-Mendès (fictif)","EtabCategorie":"LGT","EtabVille":"Vendôme","EtabDepartement":"Loir-et-Cher","Latitude":47.80228,"Longitude":1.07965},{"Civilite":"Mme","Nom":"MERCIER","Prenom":"Amina","mail_ouvert":"amina.mercier@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0419903U","EtabNom":"Lycée Pierre-Mendès (fictif)","EtabCategorie":"LGT","EtabVille":"Vendôme","EtabDepartement":"Loir-et-Cher","Latitude":47.80228,"Longitude":1.07965},{"Civilite":"M.","Nom":"MERCIER","Prenom":"Lucas","mail_ouvert":"lucas.mercier@exemple.invalid","Grade":"Stagiaire","Statut":"Stagiaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0419903U","EtabNom":"Lycée Pierre-Mendès (fictif)","EtabCategorie":"LGT","EtabVille":"Vendôme","EtabDepartement":"Loir-et-Cher","Latitude":47.80228,"Longitude":1.07965},{"Civilite":"Mme","Nom":"MOREAU","Prenom":"Chloé","mail_ouvert":"chloe.moreau@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0419903U","EtabNom":"Lycée Pierre-Mendès (fictif)","EtabCategorie":"LGT","EtabVille":"Vendôme","EtabDepartement":"Loir-et-Cher","Latitude":47.80228,"Longitude":1.07965},{"Civilite":"M.","Nom":"LAMBERT","Prenom":"Karim","mail_ouvert":"karim.lambert@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0419904B","EtabNom":"Lycée professionnel du Parc (fictif)","EtabCategorie":"LP","EtabVille":"Romorantin-Lanthenay","EtabDepartement":"Loir-et-Cher","Latitude":47.35766,"Longitude":1.74882},{"Civilite":"Mme","Nom":"BERNARD","Prenom":"Léa","mail_ouvert":"lea.bernard@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0419904B","EtabNom":"Lycée professionnel du Parc (fictif)","EtabCategorie":"LP","EtabVille":"Romorantin-Lanthenay","EtabDepartement":"Loir-et-Cher","Latitude":47.35766,"Longitude":1.74882},{"Civilite":"M.","Nom":"BONNET","Prenom":"Nathan","mail_ouvert":"nathan.bonnet@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0289901J","EtabNom":"Collège George-Sand (fictif)","EtabCategorie":"CLG","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45533,"Longitude":1.47902},{"Civilite":"M.","Nom":"CLEMENT","Prenom":"Éric","mail_ouvert":"eric.clement@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0289901J","EtabNom":"Collège George-Sand (fictif)","EtabCategorie":"CLG","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45533,"Longitude":1.47902},{"Civilite":"M.","Nom":"MARCHAND","Prenom":"Malik","mail_ouvert":"malik.marchand@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0289901J","EtabNom":"Collège George-Sand (fictif)","EtabCategorie":"CLG","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45533,"Longitude":1.47902},{"Civilite":"M.","Nom":"MARTIN","Prenom":"Yanis","mail_ouvert":"yanis.martin@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0289901J","EtabNom":"Collège George-Sand (fictif)","EtabCategorie":"CLG","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45533,"Longitude":1.47902},{"Civilite":"Mme","Nom":"ROUSSEL","Prenom":"Julie","mail_ouvert":"julie.roussel@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0289902M","EtabNom":"Lycée Émilie-du-Châtelet (fictif)","EtabCategorie":"LGT","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45491,"Longitude":1.49329},{"Civilite":"M.","Nom":"GIRARD","Prenom":"Louis","mail_ouvert":"louis.girard@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0289902M","EtabNom":"Lycée Émilie-du-Châtelet (fictif)","EtabCategorie":"LGT","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45491,"Longitude":1.49329},{"Civilite":"M.","Nom":"MARTIN","Prenom":"Hugo","mail_ouvert":"hugo.martin@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0289902M","EtabNom":"Lycée Émilie-du-Châtelet (fictif)","EtabCategorie":"LGT","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45491,"Longitude":1.49329},{"Civilite":"Mme","Nom":"LEROY","Prenom":"Zoé","mail_ouvert":"zoe.leroy@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0289902M","EtabNom":"Lycée Émilie-du-Châtelet (fictif)","EtabCategorie":"LGT","EtabVille":"Chartres","EtabDepartement":"Eure-et-Loir","Latitude":48.45491,"Longitude":1.49329},{"Civilite":"M.","Nom":"DUMAS","Prenom":"Louis","mail_ouvert":"louis.dumas@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0289903S","EtabNom":"Collège Rabelais (fictif)","EtabCategorie":"CLG","EtabVille":"Dreux","EtabDepartement":"Eure-et-Loir","Latitude":48.72397,"Longitude":1.3494},{"Civilite":"Mme","Nom":"LAMBERT","Prenom":"Sarah","mail_ouvert":"sarah.lambert@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0289904Z","EtabNom":"Lycée polyvalent Sophie-Germain (fictif)","EtabCategorie":"LPO","EtabVille":"Châteaudun","EtabDepartement":"Eure-et-Loir","Latitude":48.07226,"Longitude":1.34897},{"Civilite":"Mme","Nom":"MERCIER","Prenom":"Léa","mail_ouvert":"lea.mercier@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0289904Z","EtabNom":"Lycée polyvalent Sophie-Germain (fictif)","EtabCategorie":"LPO","EtabVille":"Châteaudun","EtabDepartement":"Eure-et-Loir","Latitude":48.07226,"Longitude":1.34897},{"Civilite":"Mme","Nom":"BRUN","Prenom":"Inès","mail_ouvert":"ines.brun@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0289904Z","EtabNom":"Lycée polyvalent Sophie-Germain (fictif)","EtabCategorie":"LPO","EtabVille":"Châteaudun","EtabDepartement":"Eure-et-Loir","Latitude":48.07226,"Longitude":1.34897},{"Civilite":"M.","Nom":"ROCHE","Prenom":"Karim","mail_ouvert":"karim.roche@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189901G","EtabNom":"Collège Louise-Michel (fictif)","EtabCategorie":"CLG","EtabVille":"Bourges","EtabDepartement":"Cher","Latitude":47.0782,"Longitude":2.3936},{"Civilite":"Mme","Nom":"BRUN","Prenom":"Zoé","mail_ouvert":"zoe.brun@exemple.invalid","Grade":"Contractuel","Statut":"Non titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0189902K","EtabNom":"Collège des Remparts (fictif)","EtabCategorie":"CLG","EtabVille":"Bourges","EtabDepartement":"Cher","Latitude":47.09163,"Longitude":2.39187},{"Civilite":"Mme","Nom":"FAURE","Prenom":"Léa","mail_ouvert":"lea.faure@exemple.invalid","Grade":"Contractuel","Statut":"Non titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189902K","EtabNom":"Collège des Remparts (fictif)","EtabCategorie":"CLG","EtabVille":"Bourges","EtabDepartement":"Cher","Latitude":47.09163,"Longitude":2.39187},{"Civilite":"Mme","Nom":"BONNET","Prenom":"Léa","mail_ouvert":"lea.bonnet@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0189902K","EtabNom":"Collège des Remparts (fictif)","EtabCategorie":"CLG","EtabVille":"Bourges","EtabDepartement":"Cher","Latitude":47.09163,"Longitude":2.39187},{"Civilite":"Mme","Nom":"HENRY","Prenom":"Camille","mail_ouvert":"camille.henry@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0189902K","EtabNom":"Collège des Remparts (fictif)","EtabCategorie":"CLG","EtabVille":"Bourges","EtabDepartement":"Cher","Latitude":47.09163,"Longitude":2.39187},{"Civilite":"Mme","Nom":"LAMBERT","Prenom":"Chloé","mail_ouvert":"chloe.lambert@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189903P","EtabNom":"Lycée professionnel du Val (fictif)","EtabCategorie":"LP","EtabVille":"Vierzon","EtabDepartement":"Cher","Latitude":47.23041,"Longitude":2.08629},{"Civilite":"Mme","Nom":"GAUTHIER","Prenom":"Léa","mail_ouvert":"lea.gauthier@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":20,"Nom_disc_affect":"Mathématiques","Rne":"0189903P","EtabNom":"Lycée professionnel du Val (fictif)","EtabCategorie":"LP","EtabVille":"Vierzon","EtabDepartement":"Cher","Latitude":47.23041,"Longitude":2.08629},{"Civilite":"Mme","Nom":"MOREAU","Prenom":"Sarah","mail_ouvert":"sarah.moreau@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0189903P","EtabNom":"Lycée professionnel du Val (fictif)","EtabCategorie":"LP","EtabVille":"Vierzon","EtabDepartement":"Cher","Latitude":47.23041,"Longitude":2.08629},{"Civilite":"Mme","Nom":"ROUSSEL","Prenom":"Lucie","mail_ouvert":"lucie.roussel@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189903P","EtabNom":"Lycée professionnel du Val (fictif)","EtabCategorie":"LP","EtabVille":"Vierzon","EtabDepartement":"Cher","Latitude":47.23041,"Longitude":2.08629},{"Civilite":"M.","Nom":"CLEMENT","Prenom":"Samuel","mail_ouvert":"samuel.clement@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189903P","EtabNom":"Lycée professionnel du Val (fictif)","EtabCategorie":"LP","EtabVille":"Vierzon","EtabDepartement":"Cher","Latitude":47.23041,"Longitude":2.08629},{"Civilite":"Mme","Nom":"LEROY","Prenom":"Amina","mail_ouvert":"amina.leroy@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0189903P","EtabNom":"Lycée professionnel du Val (fictif)","EtabCategorie":"LP","EtabVille":"Vierzon","EtabDepartement":"Cher","Latitude":47.23041,"Longitude":2.08629},{"Civilite":"M.","Nom":"NOEL","Prenom":"Nathan","mail_ouvert":"nathan.noel@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189904X","EtabNom":"Lycée professionnel de la Loire (fictif)","EtabCategorie":"LP","EtabVille":"Saint-Amand-Montrond","EtabDepartement":"Cher","Latitude":46.72525,"Longitude":2.48662},{"Civilite":"Mme","Nom":"CHEVALIER","Prenom":"Camille","mail_ouvert":"camille.chevalier@exemple.invalid","Grade":"PLP","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0189904X","EtabNom":"Lycée professionnel de la Loire (fictif)","EtabCategorie":"LP","EtabVille":"Saint-Amand-Montrond","EtabDepartement":"Cher","Latitude":46.72525,"Longitude":2.48662},{"Civilite":"Mme","Nom":"BLANC","Prenom":"Lucie","mail_ouvert":"lucie.blanc@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0189904X","EtabNom":"Lycée professionnel de la Loire (fictif)","EtabCategorie":"LP","EtabVille":"Saint-Amand-Montrond","EtabDepartement":"Cher","Latitude":46.72525,"Longitude":2.48662},{"Civilite":"Mme","Nom":"ROCHE","Prenom":"Chloé","mail_ouvert":"chloe.roche@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0369901E","EtabNom":"Collège Marie-Curie (fictif)","EtabCategorie":"CLG","EtabVille":"Châteauroux","EtabDepartement":"Indre","Latitude":46.81556,"Longitude":1.70303},{"Civilite":"Mme","Nom":"MERCIER","Prenom":"Lucie","mail_ouvert":"lucie.mercier@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0369902M","EtabNom":"Collège des Vignes (fictif)","EtabCategorie":"CLG","EtabVille":"Issoudun","EtabDepartement":"Indre","Latitude":46.95346,"Longitude":1.98436},{"Civilite":"M.","Nom":"FAURE","Prenom":"Karim","mail_ouvert":"karim.faure@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0369902M","EtabNom":"Collège des Vignes (fictif)","EtabCategorie":"CLG","EtabVille":"Issoudun","EtabDepartement":"Indre","Latitude":46.95346,"Longitude":1.98436},{"Civilite":"Mme","Nom":"HENRY","Prenom":"Anaïs","mail_ouvert":"anais.henry@exemple.invalid","Grade":"Certifié","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0369902M","EtabNom":"Collège des Vignes (fictif)","EtabCategorie":"CLG","EtabVille":"Issoudun","EtabDepartement":"Indre","Latitude":46.95346,"Longitude":1.98436},{"Civilite":"Mme","Nom":"BERNARD","Prenom":"Manon","mail_ouvert":"manon.bernard@exemple.invalid","Grade":"Contractuel","Statut":"Non titulaire","nbre_heure":15,"Nom_disc_affect":"Mathématiques","Rne":"0369902M","EtabNom":"Collège des Vignes (fictif)","EtabCategorie":"CLG","EtabVille":"Issoudun","EtabDepartement":"Indre","Latitude":46.95346,"Longitude":1.98436},{"Civilite":"Mme","Nom":"CLEMENT","Prenom":"Claire","mail_ouvert":"claire.clement@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":18,"Nom_disc_affect":"Mathématiques","Rne":"0369902M","EtabNom":"Collège des Vignes (fictif)","EtabCategorie":"CLG","EtabVille":"Issoudun","EtabDepartement":"Indre","Latitude":46.95346,"Longitude":1.98436},{"Civilite":"M.","Nom":"GARNIER","Prenom":"Malik","mail_ouvert":"malik.garnier@exemple.invalid","Grade":"Agrégé","Statut":"Titulaire","nbre_heure":9,"Nom_disc_affect":"Mathématiques","Rne":"0369902M","EtabNom":"Collège des Vignes (fictif)","EtabCategorie":"CLG","EtabVille":"Issoudun","EtabDepartement":"Indre","Latitude":46.95346,"Longitude":1.98436},{"Nom_disc_affect":"Mathématiques","nbre_heure":18,"EtabCategorie":null,"EtabDepartement":null,"Latitude":null,"Longitude":null,"Statut":"Titulaire","Civilite":"Mme","Nom":"DUPONT","Prenom":"Léa","mail_ouvert":"lea.dupont@exemple.invalid","Grade":"Certifié","Rne":"0459998Q","EtabNom":null,"EtabVille":null},{"Nom_disc_affect":"Mathématiques","nbre_heure":18,"EtabCategorie":null,"EtabDepartement":null,"Latitude":null,"Longitude":null,"Statut":"Titulaire","Civilite":"M.","Nom":"BLANCHARD","Prenom":"Yanis","mail_ouvert":null,"Grade":"Agrégé","Rne":"37 0012","EtabNom":null,"EtabVille":null},{"Nom_disc_affect":"Mathématiques","nbre_heure":18,"EtabCategorie":null,"EtabDepartement":null,"Latitude":null,"Longitude":null,"Statut":"Titulaire","Civilite":"Mme","Nom":"VIDAL","Prenom":"Zoé","mail_ouvert":"zoe.vidal@exemple.invalid","Grade":"Contractuel","Rne":null,"EtabNom":null,"EtabVille":null}];
+function demarrerDemo() {
+  $('bandeau-demo').hidden = false;
+  nomTable = 'Exemple (données fictives)';
+  lignes = DEMO.map((r, i) => ({ id: i + 1, ...r }));
+  reglages.configure = true; reglages.couleur.col = 'Grade';
+  recuLignes = recuOptions = true;
+  recalculer(); premierDemarrage();
+}
+function initGrist() {
+  if (!DANS_GRIST) return demarrerDemo();
+  grist.ready({ requiredAccess: 'read table', columns: COLONNES_GRIST, allowSelectBy: false });
+  grist.onOptions((o, interaction) => {
+    if (interaction && interaction.accessLevel) acces = interaction.accessLevel;
+    reglages = fusion(reglagesParDefaut(), o || {});
+    recuOptions = true;
+    if (recuLignes) { recalculer(); if (reglages.fond.actif) chargerFond(); }
+    premierDemarrage();
+  });
+  grist.onRecords((recs, maps) => {
+    lignes = recs || []; mappings = maps || null; recuLignes = true;
+    recalculer(); premierDemarrage();
+    if (reglages.fond.actif && !fondDonnees) chargerFond();
+  });
+  try { const p = grist.getSelectedTableId && grist.getSelectedTableId(); if (p && p.then) p.then(t => { nomTable = t || ''; }).catch(() => {}); } catch (e) { /* rien */ }
+  setTimeout(() => { if (!recuOptions) { recuOptions = true; premierDemarrage(); } }, 2000);
+}
+appliquerTheme();
+initCarte();
+rendreLegende(); rendreStatut();
+initGrist();
+
+// points d’accès pour les tests automatiques
+window.cartoProfs = { VERSION, rendreModele, lienMailto, lots, deviner, typeEtab, domaineAcademie, analyserColonne, distanceKm,
+  etat: () => ({ personnes, visibles, etabs, categories, introuvables, sansUai, selection: [...selection], reglages, geo, filtre, depart, devinees }),
+  destinataires, csvEtabs, ouvrirFiche, selectionnerZone };
+</script>
+</body>
+</html>

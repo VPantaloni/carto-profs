@@ -1,0 +1,83 @@
+Civilite,Nom,Prenom,mail_ouvert,Grade,Statut,nbre_heure,Nom_disc_affect,Rne,EtabNom,EtabCategorie,EtabVille,EtabDepartement,Latitude,Longitude
+Mme,BONNET,Lina,lina.bonnet@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459901A,Collège des Tilleuls (fictif),CLG,Orléans,Loiret,47.90768,1.9066
+M.,ROUSSEL,Bruno,bruno.roussel@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459901A,Collège des Tilleuls (fictif),CLG,Orléans,Loiret,47.90768,1.9066
+M.,PERRIN,Éric,eric.perrin@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0459901A,Collège des Tilleuls (fictif),CLG,Orléans,Loiret,47.90768,1.9066
+M.,NOEL,Bruno,bruno.noel@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459901A,Collège des Tilleuls (fictif),CLG,Orléans,Loiret,47.90768,1.9066
+M.,BERNARD,Théo,theo.bernard@exemple.invalid,Stagiaire,Stagiaire,18,Mathématiques,0459901A,Collège des Tilleuls (fictif),CLG,Orléans,Loiret,47.90768,1.9066
+Mme,LUCAS,Anaïs,anais.lucas@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459902D,Collège Pierre-Mendès (fictif),CLG,Orléans,Loiret,47.89174,1.92735
+M.,HENRY,Louis,louis.henry@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459903H,Lycée professionnel des Remparts (fictif),LP,Montargis,Loiret,47.98375,2.74064
+M.,BLANC,Adrien,adrien.blanc@exemple.invalid,Agrégé,Titulaire,20,Mathématiques,0459904R,Lycée polyvalent des Sablons (fictif),LPO,Pithiviers,Loiret,48.16205,2.24938
+Mme,PETIT,Anaïs,anais.petit@exemple.invalid,Stagiaire,Stagiaire,15,Mathématiques,0459904R,Lycée polyvalent des Sablons (fictif),LPO,Pithiviers,Loiret,48.16205,2.24938
+Mme,GARNIER,Inès,ines.garnier@exemple.invalid,Contractuel,Non titulaire,9,Mathématiques,0459904R,Lycée polyvalent des Sablons (fictif),LPO,Pithiviers,Loiret,48.16205,2.24938
+M.,CHEVALIER,Bruno,bruno.chevalier@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0459904R,Lycée polyvalent des Sablons (fictif),LPO,Pithiviers,Loiret,48.16205,2.24938
+Mme,HENRY,Chloé,chloe.henry@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459904R,Lycée polyvalent des Sablons (fictif),LPO,Pithiviers,Loiret,48.16205,2.24938
+M.,BERNARD,Mehdi,mehdi.bernard@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459904R,Lycée polyvalent des Sablons (fictif),LPO,Pithiviers,Loiret,48.16205,2.24938
+Mme,FAURE,Éva,eva.faure@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459905Y,Collège Victor-Hugo (fictif),CLG,Gien,Loiret,47.7043,2.62667
+M.,GARNIER,Mehdi,mehdi.garnier@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0459905Y,Collège Victor-Hugo (fictif),CLG,Gien,Loiret,47.7043,2.62667
+Mme,MARTIN,Nadia,nadia.martin@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459905Y,Collège Victor-Hugo (fictif),CLG,Gien,Loiret,47.7043,2.62667
+Mme,MARCHAND,Inès,ines.marchand@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0459905Y,Collège Victor-Hugo (fictif),CLG,Gien,Loiret,47.7043,2.62667
+M.,LEFEBVRE,Mehdi,mehdi.lefebvre@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0379901F,Collège Jules-Ferry (fictif),CLG,Tours,Indre-et-Loire,47.40269,0.70367
+Mme,FOURNIER,Manon,manon.fournier@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0379901F,Collège Jules-Ferry (fictif),CLG,Tours,Indre-et-Loire,47.40269,0.70367
+Mme,ROCHE,Claire,claire.roche@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0379902J,Collège Sophie-Germain (fictif),CLG,Tours,Indre-et-Loire,47.3991,0.69897
+Mme,LEFEBVRE,Sarah,sarah.lefebvre@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0379902J,Collège Sophie-Germain (fictif),CLG,Tours,Indre-et-Loire,47.3991,0.69897
+Mme,FAURE,Zoé,zoe.faure@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0379903N,Collège de la Forêt (fictif),CLG,Amboise,Indre-et-Loire,47.40138,0.9861
+M.,LAMBERT,Éric,eric.lambert@exemple.invalid,Agrégé,Titulaire,15,Mathématiques,0379903N,Collège de la Forêt (fictif),CLG,Amboise,Indre-et-Loire,47.40138,0.9861
+M.,NOEL,Théo,theo.noel@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0379903N,Collège de la Forêt (fictif),CLG,Amboise,Indre-et-Loire,47.40138,0.9861
+M.,PERRIN,Malik,malik.perrin@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0379903N,Collège de la Forêt (fictif),CLG,Amboise,Indre-et-Loire,47.40138,0.9861
+Mme,GARNIER,Lina,lina.garnier@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0379903N,Collège de la Forêt (fictif),CLG,Amboise,Indre-et-Loire,47.40138,0.9861
+Mme,PERRIN,Claire,claire.perrin@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0379903N,Collège de la Forêt (fictif),CLG,Amboise,Indre-et-Loire,47.40138,0.9861
+Mme,PETIT,Amina,amina.petit@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0379904W,Lycée professionnel Ronsard (fictif),LP,Chinon,Indre-et-Loire,47.16263,0.25481
+M.,MEYER,Mehdi,mehdi.meyer@exemple.invalid,PLP,Titulaire,9,Mathématiques,0379904W,Lycée professionnel Ronsard (fictif),LP,Chinon,Indre-et-Loire,47.16263,0.25481
+M.,BRUN,Malik,malik.brun@exemple.invalid,PLP,Titulaire,20,Mathématiques,0379904W,Lycée professionnel Ronsard (fictif),LP,Chinon,Indre-et-Loire,47.16263,0.25481
+M.,CLEMENT,Yanis,yanis.clement@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0379905D,Collège Olympe-de-Gouges (fictif),CLG,Loches,Indre-et-Loire,47.11451,1.00478
+M.,MASSON,Éric,eric.masson@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0419901L,Lycée polyvalent Jean-Moulin (fictif),LPO,Blois,Loir-et-Cher,47.5872,1.33628
+Mme,PERRIN,Léa,lea.perrin@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0419901L,Lycée polyvalent Jean-Moulin (fictif),LPO,Blois,Loir-et-Cher,47.5872,1.33628
+M.,MASSON,Jonas,jonas.masson@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0419901L,Lycée polyvalent Jean-Moulin (fictif),LPO,Blois,Loir-et-Cher,47.5872,1.33628
+Mme,ROUSSEL,Manon,manon.roussel@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0419901L,Lycée polyvalent Jean-Moulin (fictif),LPO,Blois,Loir-et-Cher,47.5872,1.33628
+Mme,MARCHAND,Chloé,chloe.marchand@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0419901L,Lycée polyvalent Jean-Moulin (fictif),LPO,Blois,Loir-et-Cher,47.5872,1.33628
+M.,BERNARD,Bruno,bruno.bernard@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0419901L,Lycée polyvalent Jean-Moulin (fictif),LPO,Blois,Loir-et-Cher,47.5872,1.33628
+Mme,LAMBERT,Nadia,nadia.lambert@exemple.invalid,Agrégé,Titulaire,15,Mathématiques,0419902P,Collège Marie-Curie (fictif),CLG,Blois,Loir-et-Cher,47.58503,1.3422
+Mme,LEROY,Anaïs,anais.leroy@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0419903U,Lycée Pierre-Mendès (fictif),LGT,Vendôme,Loir-et-Cher,47.80228,1.07965
+Mme,MARCHAND,Amina,amina.marchand@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0419903U,Lycée Pierre-Mendès (fictif),LGT,Vendôme,Loir-et-Cher,47.80228,1.07965
+M.,PETIT,Théo,theo.petit@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0419903U,Lycée Pierre-Mendès (fictif),LGT,Vendôme,Loir-et-Cher,47.80228,1.07965
+Mme,MERCIER,Amina,amina.mercier@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0419903U,Lycée Pierre-Mendès (fictif),LGT,Vendôme,Loir-et-Cher,47.80228,1.07965
+M.,MERCIER,Lucas,lucas.mercier@exemple.invalid,Stagiaire,Stagiaire,9,Mathématiques,0419903U,Lycée Pierre-Mendès (fictif),LGT,Vendôme,Loir-et-Cher,47.80228,1.07965
+Mme,MOREAU,Chloé,chloe.moreau@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0419903U,Lycée Pierre-Mendès (fictif),LGT,Vendôme,Loir-et-Cher,47.80228,1.07965
+M.,LAMBERT,Karim,karim.lambert@exemple.invalid,PLP,Titulaire,9,Mathématiques,0419904B,Lycée professionnel du Parc (fictif),LP,Romorantin-Lanthenay,Loir-et-Cher,47.35766,1.74882
+Mme,BERNARD,Léa,lea.bernard@exemple.invalid,PLP,Titulaire,20,Mathématiques,0419904B,Lycée professionnel du Parc (fictif),LP,Romorantin-Lanthenay,Loir-et-Cher,47.35766,1.74882
+M.,BONNET,Nathan,nathan.bonnet@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0289901J,Collège George-Sand (fictif),CLG,Chartres,Eure-et-Loir,48.45533,1.47902
+M.,CLEMENT,Éric,eric.clement@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0289901J,Collège George-Sand (fictif),CLG,Chartres,Eure-et-Loir,48.45533,1.47902
+M.,MARCHAND,Malik,malik.marchand@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0289901J,Collège George-Sand (fictif),CLG,Chartres,Eure-et-Loir,48.45533,1.47902
+M.,MARTIN,Yanis,yanis.martin@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0289901J,Collège George-Sand (fictif),CLG,Chartres,Eure-et-Loir,48.45533,1.47902
+Mme,ROUSSEL,Julie,julie.roussel@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0289902M,Lycée Émilie-du-Châtelet (fictif),LGT,Chartres,Eure-et-Loir,48.45491,1.49329
+M.,GIRARD,Louis,louis.girard@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0289902M,Lycée Émilie-du-Châtelet (fictif),LGT,Chartres,Eure-et-Loir,48.45491,1.49329
+M.,MARTIN,Hugo,hugo.martin@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0289902M,Lycée Émilie-du-Châtelet (fictif),LGT,Chartres,Eure-et-Loir,48.45491,1.49329
+Mme,LEROY,Zoé,zoe.leroy@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0289902M,Lycée Émilie-du-Châtelet (fictif),LGT,Chartres,Eure-et-Loir,48.45491,1.49329
+M.,DUMAS,Louis,louis.dumas@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0289903S,Collège Rabelais (fictif),CLG,Dreux,Eure-et-Loir,48.72397,1.3494
+Mme,LAMBERT,Sarah,sarah.lambert@exemple.invalid,Agrégé,Titulaire,9,Mathématiques,0289904Z,Lycée polyvalent Sophie-Germain (fictif),LPO,Châteaudun,Eure-et-Loir,48.07226,1.34897
+Mme,MERCIER,Léa,lea.mercier@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0289904Z,Lycée polyvalent Sophie-Germain (fictif),LPO,Châteaudun,Eure-et-Loir,48.07226,1.34897
+Mme,BRUN,Inès,ines.brun@exemple.invalid,Certifié,Titulaire,9,Mathématiques,0289904Z,Lycée polyvalent Sophie-Germain (fictif),LPO,Châteaudun,Eure-et-Loir,48.07226,1.34897
+M.,ROCHE,Karim,karim.roche@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0189901G,Collège Louise-Michel (fictif),CLG,Bourges,Cher,47.0782,2.3936
+Mme,BRUN,Zoé,zoe.brun@exemple.invalid,Contractuel,Non titulaire,20,Mathématiques,0189902K,Collège des Remparts (fictif),CLG,Bourges,Cher,47.09163,2.39187
+Mme,FAURE,Léa,lea.faure@exemple.invalid,Contractuel,Non titulaire,18,Mathématiques,0189902K,Collège des Remparts (fictif),CLG,Bourges,Cher,47.09163,2.39187
+Mme,BONNET,Léa,lea.bonnet@exemple.invalid,Certifié,Titulaire,20,Mathématiques,0189902K,Collège des Remparts (fictif),CLG,Bourges,Cher,47.09163,2.39187
+Mme,HENRY,Camille,camille.henry@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0189902K,Collège des Remparts (fictif),CLG,Bourges,Cher,47.09163,2.39187
+Mme,LAMBERT,Chloé,chloe.lambert@exemple.invalid,PLP,Titulaire,18,Mathématiques,0189903P,Lycée professionnel du Val (fictif),LP,Vierzon,Cher,47.23041,2.08629
+Mme,GAUTHIER,Léa,lea.gauthier@exemple.invalid,PLP,Titulaire,20,Mathématiques,0189903P,Lycée professionnel du Val (fictif),LP,Vierzon,Cher,47.23041,2.08629
+Mme,MOREAU,Sarah,sarah.moreau@exemple.invalid,PLP,Titulaire,9,Mathématiques,0189903P,Lycée professionnel du Val (fictif),LP,Vierzon,Cher,47.23041,2.08629
+Mme,ROUSSEL,Lucie,lucie.roussel@exemple.invalid,PLP,Titulaire,18,Mathématiques,0189903P,Lycée professionnel du Val (fictif),LP,Vierzon,Cher,47.23041,2.08629
+M.,CLEMENT,Samuel,samuel.clement@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0189903P,Lycée professionnel du Val (fictif),LP,Vierzon,Cher,47.23041,2.08629
+Mme,LEROY,Amina,amina.leroy@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0189903P,Lycée professionnel du Val (fictif),LP,Vierzon,Cher,47.23041,2.08629
+M.,NOEL,Nathan,nathan.noel@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0189904X,Lycée professionnel de la Loire (fictif),LP,Saint-Amand-Montrond,Cher,46.72525,2.48662
+Mme,CHEVALIER,Camille,camille.chevalier@exemple.invalid,PLP,Titulaire,18,Mathématiques,0189904X,Lycée professionnel de la Loire (fictif),LP,Saint-Amand-Montrond,Cher,46.72525,2.48662
+Mme,BLANC,Lucie,lucie.blanc@exemple.invalid,Certifié,Titulaire,15,Mathématiques,0189904X,Lycée professionnel de la Loire (fictif),LP,Saint-Amand-Montrond,Cher,46.72525,2.48662
+Mme,ROCHE,Chloé,chloe.roche@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0369901E,Collège Marie-Curie (fictif),CLG,Châteauroux,Indre,46.81556,1.70303
+Mme,MERCIER,Lucie,lucie.mercier@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0369902M,Collège des Vignes (fictif),CLG,Issoudun,Indre,46.95346,1.98436
+M.,FAURE,Karim,karim.faure@exemple.invalid,Agrégé,Titulaire,9,Mathématiques,0369902M,Collège des Vignes (fictif),CLG,Issoudun,Indre,46.95346,1.98436
+Mme,HENRY,Anaïs,anais.henry@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0369902M,Collège des Vignes (fictif),CLG,Issoudun,Indre,46.95346,1.98436
+Mme,BERNARD,Manon,manon.bernard@exemple.invalid,Contractuel,Non titulaire,15,Mathématiques,0369902M,Collège des Vignes (fictif),CLG,Issoudun,Indre,46.95346,1.98436
+Mme,CLEMENT,Claire,claire.clement@exemple.invalid,Agrégé,Titulaire,18,Mathématiques,0369902M,Collège des Vignes (fictif),CLG,Issoudun,Indre,46.95346,1.98436
+M.,GARNIER,Malik,malik.garnier@exemple.invalid,Agrégé,Titulaire,9,Mathématiques,0369902M,Collège des Vignes (fictif),CLG,Issoudun,Indre,46.95346,1.98436
+Mme,DUPONT,Léa,lea.dupont@exemple.invalid,Certifié,Titulaire,18,Mathématiques,0459998Q,,,,,,
+M.,BLANCHARD,Yanis,,Agrégé,Titulaire,18,Mathématiques,37 0012,,,,,,
+Mme,VIDAL,Zoé,zoe.vidal@exemple.invalid,Contractuel,Titulaire,18,Mathématiques,,,,,,,
