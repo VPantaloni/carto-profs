@@ -118,8 +118,11 @@ a { color: var(--accent-fonce); }
 .barre-selection { position: absolute; left: 50%; bottom: 58px; transform: translateX(-50%); display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 6px 6px 6px 12px; border-radius: 12px; background: var(--panneau); border: 1.5px solid var(--accent); box-shadow: var(--ombre-forte); z-index: 7; max-width: calc(100% - 24px); }
 .barre-selection .doux { color: var(--doux); }
 
-.pt { position: relative; padding: 0; border-radius: 50%; border: 2px solid var(--anneau); box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: pointer; }
-.pt:hover, .pt:focus-visible { transform: scale(1.15); z-index: 2; }
+/* L’élément donné à MapLibre (.pt-ancre) ne doit recevoir ni position ni transform : MapLibre le place avec les siens. */
+.pt-ancre { line-height: 0; }
+.pt-ancre:hover, .pt-ancre:focus-within { z-index: 2; }
+.pt { position: relative; display: block; padding: 0; border-radius: 50%; border: 2px solid var(--anneau); box-shadow: 0 1px 3px rgba(0,0,0,.4); cursor: pointer; }
+.pt:hover, .pt:focus-visible { transform: scale(1.15); }
 .pt.actif { box-shadow: 0 0 0 3px var(--accent), 0 1px 3px rgba(0,0,0,.4); }
 .pt.choisi::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed var(--accent); }
 .badge { position: absolute; right: -10px; top: -10px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #1f2937; color: #fff; font: 700 11px/18px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; }
@@ -190,6 +193,11 @@ textarea { resize: vertical; }
 .tab-col td:first-child { font-weight: 600; width: 34%; }
 .tab-col td:last-child { color: var(--doux); font-size: 12px; width: 30%; }
 .tab-col select { width: 100%; }
+.astuce-acces { display: flex; gap: 8px; align-items: flex-start; padding: 9px 12px; border-radius: 10px; background: var(--accent-clair); border: 1px solid var(--accent-bord); font-size: 12px; }
+.astuce-acces .ic { color: var(--accent-fonce); margin-top: 1px; }
+.sans-acces { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); z-index: 9; width: 420px; max-width: calc(100% - 24px); background: var(--panneau); border: 1.5px solid var(--accent); border-radius: 14px; box-shadow: var(--ombre-forte); padding: 18px; display: flex; flex-direction: column; gap: 8px; }
+.sans-acces h2 { margin: 0; font-size: 16px; }
+.sans-acces ol { margin: 0; padding-left: 20px; }
 .adresses { display: flex; flex-wrap: wrap; gap: 6px; max-height: 96px; overflow: auto; }
 .adresses span { padding: 3px 8px; border-radius: 999px; background: var(--survol); font-size: 12px; }
 
@@ -293,6 +301,13 @@ body.presentation .legende { top: 12px; }
   <div class="visite-halo" id="visite-halo" hidden></div>
   <div class="visite" id="visite" role="dialog" aria-labelledby="visite-titre" hidden></div>
   <div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+  <div class="sans-acces" id="sans-acces" role="alert" hidden>
+    <h2>Le widget n’a pas encore accès à la table</h2>
+    <ol><li>Cliquez sur cette vue, puis ouvrez le panneau de droite de Grist (« Widget personnalisé »).</li>
+      <li>Dans la rubrique <b>Accès</b>, choisissez <b>Lire la table sélectionnée</b>.</li>
+      <li>Choisissez <b>Accès complet au document</b> seulement si vous voulez écrire les coordonnées dans la table.</li></ol>
+    <p class="aide-texte" style="margin:0">Aide détaillée : bouton (?) en haut à droite.</p>
+  </div>
   <button class="btn" id="quitter-presentation" hidden><i data-ic="x"></i>Quitter la présentation</button>
 </div>
 
@@ -301,8 +316,14 @@ body.presentation .legende { top: 12px; }
 // Carto-profs — carte des personnes d'une table Grist, placées par l'UAI de leur établissement (open data).
 // Un seul fichier, sans étape de construction. Icônes : Lucide (https://lucide.dev, licence ISC).
 // ============================================================================================================
-const VERSION = '1.0.0';
+const VERSION = '1.1.0';
 const NOUVEAUTES = [
+  { version: '1.1.0', date: 'novembre 2026', points: [
+    'Les points restent à leur place quand on zoome, tourne ou incline la carte.',
+    'Boussole en bas à droite : un clic remet le nord en haut et la carte à plat.',
+    'Colorier selon… : le choix actuel est en haut, avec « Retirer les couleurs » ; une croix dans la légende fait de même.',
+    'Fenêtre de bienvenue : rappel de l’accès du widget ; message clair si le widget n’a pas accès à la table.'
+  ] },
   { version: '1.0.0', date: 'novembre 2026', points: [
     'Première version : carte des personnes par établissement, coordonnées retrouvées en open data à partir de l’UAI.',
     'Assistants « Colorier selon… » et « Bulles », légende cliquable, points en camembert, regroupement.',
@@ -340,6 +361,7 @@ const COLONNES_GRIST = [
   { name: 'Latitude', title: 'Latitude (facultatif)', optional: true },
   { name: 'Longitude', title: 'Longitude (facultatif)', optional: true }
 ];
+const LIB_ACCES = { none: 'aucun accès', 'read table': 'Lire la table sélectionnée', full: 'Accès complet au document' };
 const ROLES = { UAI: 'UAI (obligatoire)', Nom: 'Nom', Prenom: 'Prénom', Mail: 'Mail', Libelle: 'Libellé', Groupe: 'Groupe', Couleur: 'Couleur (#rrggbb)', Etablissement: 'Établissement (secours)', Commune: 'Commune (secours)', Latitude: 'Latitude', Longitude: 'Longitude' };
 
 // Icônes Lucide (contenu des balises <svg>)
@@ -790,7 +812,8 @@ function initCarte() {
   }
   map = new maplibregl.Map({ container: 'carte', style: STYLES[themeEffectif()], center: [1.75, 47.5], zoom: 6.6, preserveDrawingBuffer: true, attributionControl: { compact: true } });
   themeApplique = themeEffectif();
-  map.addControl(new maplibregl.NavigationControl({ showCompass: false }), 'bottom-right');
+  // boussole : un clic remet le nord en haut et la carte à plat (après rotation ou inclinaison à deux doigts)
+  map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right');
   map.on('styledata', ajouterCouches);
   map.on('load', ajouterCouches);
   map.on('render', planifierMarqueurs);
@@ -892,7 +915,8 @@ function fondPoint(parts) {
 const taillePoint = n => n > 9 ? 30 : n > 4 ? 26 : n > 1 ? 22 : 16;
 function marqueurEtab(uai) {
   const e = parUai.get(uai); if (!e) return null;
-  const el = document.createElement('button');
+  const ancre = document.createElement('div'); ancre.className = 'pt-ancre';
+  const el = document.createElement('button'); ancre.appendChild(el);
   el.type = 'button'; el.className = 'pt' + (uai === ficheUai ? ' actif' : '') + (e.pers.some(p => selection.has(p.id)) ? ' choisi' : '');
   const t = taillePoint(e.n); el.style.width = el.style.height = t + 'px';
   el.style.background = fondPoint(e.parts);
@@ -904,7 +928,7 @@ function marqueurEtab(uai) {
   el.addEventListener('focus', () => montrerSurvol(e));
   el.addEventListener('blur', cacherSurvol);
   el.addEventListener('click', ev => { ev.stopPropagation(); ouvrirFiche(uai); });
-  return new maplibregl.Marker({ element: el }).setLngLat([e.lon, e.lat]);
+  return new maplibregl.Marker({ element: ancre }).setLngLat([e.lon, e.lat]);
 }
 function marqueurGroupe(f) {
   const p = f.properties, n = p.personnes || p.point_count;
@@ -1032,6 +1056,7 @@ function rendreLegende() {
     + ['Public', 'Privé'].map(s => `<button class="puce" data-secteur="${s}" aria-pressed="${f.secteurs.includes(s)}">${s}</button>`).join('');
   $('legende').classList.toggle('replie', legendeRepliee);
   $('legende').innerHTML = `<div class="leg-tete"><b>${esc(titre)}</b>
+      ${reglages.couleur.source !== 'aucune' && c ? `<button class="fermer" id="leg-retirer" aria-label="Retirer les couleurs" title="Retirer les couleurs (tous les points pareils)">${ic('x')}</button>` : ''}
       <button class="fermer" id="leg-replier" aria-expanded="${!legendeRepliee}" aria-label="${legendeRepliee ? 'Déplier' : 'Replier'} la légende">${ic(legendeRepliee ? 'down' : 'up')}</button></div>
     <div class="leg-corps">
       ${items || '<p class="aide-texte">Aucune personne à afficher.</p>'}
@@ -1216,22 +1241,27 @@ function rendreCouleurs() {
   if (etapeCouleur === 1) {
     const exclues = new Set([col('UAI'), col('Nom'), col('Prenom'), col('Mail'), col('Latitude'), col('Longitude')].filter(Boolean));
     const infos = colonnesTable.filter(c => !exclues.has(c)).map(c => analyserColonne(c)).filter(i => i.genre !== 'vide');
-    const bons = infos.filter(i => i.bon).sort((x, y) => (x.type === 'nombre') - (y.type === 'nombre') || x.distinct - y.distinct);
-    const autres = infos.filter(i => !i.bon);
+    const actuel = b.source === 'categorie' && b.col ? infos.find(i => i.col === b.col) : null;
+    const bons = infos.filter(i => i.bon && i !== actuel).sort((x, y) => (x.type === 'nombre') - (y.type === 'nombre') || x.distinct - y.distinct);
+    const autres = infos.filter(i => !i.bon && i !== actuel);
     const apercu = i => i.type === 'nombre' ? `Dégradé : de ${i.date ? new Date(i.min).getFullYear() : i.min.toLocaleString('fr-FR')} à ${i.date ? new Date(i.max).getFullYear() : i.max.toLocaleString('fr-FR')}`
       : `${pluriel(i.distinct, 'valeur', 'valeurs')} : ${i.valeurs.slice(0, 4).map(([v, n]) => `${v || 'vide'} (${n})`).join(', ')}${i.distinct > 4 ? '…' : ''}`;
     const choix = (val, titre, sous, etiq, coche) => `<label class="choix"><input type="radio" name="cc-col" value="${esc(val)}" ${coche ? 'checked' : ''}>
       <span><b>${esc(titre)}</b> ${etiq ? `<span class="etiq">${esc(etiq)}</span>` : ''}<span class="sous">${esc(sous)}</span></span></label>`;
     const cCoul = col('Couleur');
     ouvrirModale(`${teteModale('palette', 'Colorier selon…', 'Étape 1 sur 2 · le widget a regardé vos colonnes')}
-      <div style="font-weight:600">Colonnes qui font de bonnes catégories</div>
       <div style="display:flex;flex-direction:column;gap:6px" role="radiogroup" aria-label="Colonne utilisée pour les couleurs">
-        ${bons.map(i => choix(i.col, i.col, apercu(i), i.genre, b.source === 'categorie' && b.col === i.col)).join('') || '<p class="aide-texte">Aucune colonne ne ressemble à une catégorie (trop de valeurs différentes).</p>'}
-        ${cCoul ? choix('__colonne', `Couleur lue dans la colonne ${cCoul}`, 'chaque ligne donne sa couleur au format #rrggbb', '', b.source === 'colonne') : ''}
-        ${choix('__aucune', 'Une seule couleur', 'tous les points pareils', '', b.source === 'aucune')}
+        ${actuel || b.source !== 'categorie' ? `<div class="rangee"><span style="font-weight:600">Choix actuel</span><span style="flex:1"></span>
+          ${b.source !== 'aucune' ? `<button class="btn petit" id="cc-retirer">${ic('x')}Retirer les couleurs</button>` : ''}</div>` : ''}
+        ${actuel ? choix(actuel.col, actuel.col, apercu(actuel), 'choix actuel', true) : ''}
+        ${b.source === 'colonne' && cCoul ? choix('__colonne', `Couleur lue dans la colonne ${cCoul}`, 'chaque ligne donne sa couleur au format #rrggbb', 'choix actuel', true) : ''}
+        ${choix('__aucune', 'Une seule couleur', 'pas de catégories : tous les points pareils', b.source === 'aucune' ? 'choix actuel' : '', b.source === 'aucune')}
+        <div style="font-weight:600;margin-top:6px">${actuel || b.source !== 'categorie' ? 'Ou une autre colonne' : 'Colonnes qui font de bonnes catégories'}</div>
+        ${bons.map(i => choix(i.col, i.col, apercu(i), i.genre, false)).join('') || '<p class="aide-texte">Aucune autre colonne ne ressemble à une catégorie (trop de valeurs différentes).</p>'}
+        ${cCoul && b.source !== 'colonne' ? choix('__colonne', `Couleur lue dans la colonne ${cCoul}`, 'chaque ligne donne sa couleur au format #rrggbb', '', false) : ''}
       </div>
       ${autres.length ? `<details><summary>Autres colonnes (${autres.length})</summary><div style="display:flex;flex-direction:column;gap:6px;margin-top:6px">
-        ${autres.map(i => choix(i.col, i.col, apercu(i) + ' — beaucoup de valeurs différentes', i.genre, b.source === 'categorie' && b.col === i.col)).join('')}</div></details>` : ''}
+        ${autres.map(i => choix(i.col, i.col, apercu(i) + ' — beaucoup de valeurs différentes', i.genre, false)).join('')}</div></details>` : ''}
       <p class="aide-texte">Écartées d’office : ${[...exclues].map(esc).join(', ') || 'aucune'} (servent à placer ou nommer les personnes).</p>
       <div class="rangee fin"><button class="btn" data-fermer>Annuler</button><button class="btn primaire" id="cc-suivant">Suivant</button></div>`);
     return;
@@ -1256,6 +1286,10 @@ function rendreCouleurs() {
       <label class="case"><input type="radio" name="cc-mode" value="camembert" ${b.mode !== 'majoritaire' ? 'checked' : ''}><span class="pastille" style="background:conic-gradient(#2563eb 0 60%, #ea580c 60% 100%)"></span>Camembert (part de chaque couleur)</label>
       <label class="case"><input type="radio" name="cc-mode" value="majoritaire" ${b.mode === 'majoritaire' ? 'checked' : ''}><span class="pastille" style="background:#2563eb"></span>Couleur la plus fréquente</label></div>` : ''}
     <div class="rangee fin"><button class="btn" id="cc-retour">Retour</button><button class="btn primaire" id="cc-appliquer">Appliquer à la carte</button></div>`);
+}
+function retirerCouleurs() {
+  reglages.couleur = { ...reglages.couleur, source: 'aucune' }; masquees.clear();
+  sauver(); recalculer(); toast('Couleurs retirées : tous les points sont pareils.', 2500);
 }
 function lireChoixCouleur() {
   const r = $('modale').querySelector('input[name="cc-col"]:checked'); if (!r) return false;
@@ -1350,6 +1384,8 @@ function ouvrirColonnes(premier = false) {
   const sansMsg = sansUai.length ? `<div class="alerte">${pluriel(sansUai.length, 'ligne n’a pas d’UAI', 'lignes n’ont pas d’UAI')} : ${sansUai.length > 1 ? 'elles ne sont pas' : 'elle n’est pas'} sur la carte (${esc(sansUai.slice(0, 4).map(nomPersonne).join(', '))}${sansUai.length > 4 ? '…' : ''}).</div>` : '';
   const pleinAcces = acces === 'full';
   ouvrirModale(`${teteModale('columns', premier ? 'Bienvenue dans Carto-profs' : 'Colonnes et UAI', `J’ai lu ${nomTable ? `la table <b>${esc(nomTable)}</b>` : 'la table'} (${pluriel(lignes.length, 'ligne', 'lignes')}). Voici ce que j’ai reconnu :`)}
+    ${premier ? `<div class="astuce-acces">${ic('help')}<span><b>Accès du widget</b> : actuellement « ${esc(LIB_ACCES[acces] || 'inconnu')} ». Il se règle dans le panneau de droite de Grist, rubrique Accès.
+      Pour la carte, « Lire la table sélectionnée » suffit ; « Accès complet au document » ne sert qu’à écrire les coordonnées dans la table (plus bas).</span></div>` : ''}
     ${!col('UAI') ? `<div class="alerte">Je ne trouve pas la colonne des UAI (codes RNE des établissements). Choisissez-la ci-dessous : sans elle, je ne peux pas placer les personnes.</div>` : ''}
     <table class="tab-col"><tbody>${roles.map(r => `<tr><td>${ROLES[r]}</td><td><select data-role="${r}" aria-label="Colonne pour ${ROLES[r]}" ${mappings && mappings[r] ? 'disabled title="Choisie dans le panneau de droite de Grist"' : ''}>${opts(r)}</select></td>
       <td>${col(r) ? esc(origineCol(r)) : ''}</td></tr>`).join('')}</tbody></table>
@@ -1502,7 +1538,7 @@ function exporterPng() {
       g.fillStyle = '#06303d'; g.font = `700 ${12 * k}px Inter, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(el.dataset.n, x, y + 4 * k); g.textAlign = 'left';
       continue;
     }
-    const e = parUai.get(el.dataset.uai); if (!e) continue;
+    const pt = el.querySelector('.pt'); const e = pt && parUai.get(pt.dataset.uai); if (!e) continue;
     const r = taillePoint(e.n) / 2 * k, tot = e.parts.reduce((s, p) => s + p.n, 0);
     let a = -Math.PI / 2;
     const parts = reglages.couleur.mode === 'majoritaire' ? [e.parts[0]] : e.parts;
@@ -1794,6 +1830,7 @@ $('resultats').addEventListener('click', ev => { const b = ev.target.closest('[d
 $('legende').addEventListener('click', ev => {
   const it = ev.target.closest('[data-cat]');
   if (it) { const k = it.dataset.cat; masquees.has(k) ? masquees.delete(k) : masquees.add(k); recalculer(); const n = $('legende').querySelector(`[data-cat="${CSS.escape(k)}"]`); if (n) n.focus(); return; }
+  if (ev.target.closest('#leg-retirer')) return retirerCouleurs();
   if (ev.target.closest('#leg-replier')) { legendeRepliee = !legendeRepliee; rendreLegende(); $('leg-replier').focus(); return; }
   const t = ev.target.closest('[data-type]');
   if (t) { const f = reglages.fond, k = t.dataset.type; f.types = f.types.includes(k) ? f.types.filter(x => x !== k) : [...f.types, k]; sauver(); rendreLegende(); majFond(); return; }
@@ -1887,6 +1924,7 @@ $('modale').addEventListener('click', ev => {
   // couleurs
   if (id === 'cc-suivant') { if (lireChoixCouleur()) { etapeCouleur = 2; rendreCouleurs(); } else toast('Choisissez une colonne.'); return; }
   if (id === 'cc-retour') { etapeCouleur = 1; rendreCouleurs(); return; }
+  if (id === 'cc-retirer') { retirerCouleurs(); fermerModale(); return; }
   if (id === 'cc-appliquer') return appliquerCouleurs();
   if (id === 'cc-raz') { brouillonCouleur.valeurs = {}; rendreCouleurs(); return; }
   if (b.dataset.palette) { brouillonCouleur.palette = b.dataset.palette; brouillonCouleur.valeurs = {}; rendreCouleurs(); return; }
@@ -1985,13 +2023,14 @@ function initGrist() {
   grist.ready({ requiredAccess: 'read table', columns: COLONNES_GRIST, allowSelectBy: true });   // une vue Fiche peut suivre la carte
   grist.onOptions((o, interaction) => {
     if (interaction && interaction.accessLevel) acces = interaction.accessLevel;
+    $('sans-acces').hidden = acces !== 'none';
     reglages = fusion(reglagesParDefaut(), o || {});
     recuOptions = true;
     if (recuLignes) { recalculer(); if (reglages.fond.actif) chargerFond(); }
     premierDemarrage();
   });
   grist.onRecords((recs, maps) => {
-    lignes = recs || []; mappings = maps || null; recuLignes = true;
+    lignes = recs || []; mappings = maps || null; recuLignes = true; $('sans-acces').hidden = true;
     recalculer(); premierDemarrage();
     if (reglages.fond.actif && !fondDonnees) chargerFond();
   });

@@ -123,6 +123,8 @@ def test_liaison_grist_et_premier_demarrage(navigateur, serveur):
     expect(page.locator('select[data-role="UAI"]')).to_have_value("Rne")
     expect(page.locator('select[data-role="Mail"]')).to_have_value("mail_ouvert")
     expect(page.locator('select[data-role="Prenom"]')).to_have_value("Prenom")
+    expect(dialogue).to_contain_text("Accès du widget")
+    expect(dialogue).to_contain_text("Lire la table sélectionnée")
     # une seule requête, seulement les UAI valides et normalisés de la table
     page.wait_for_function("document.querySelectorAll('.pt').length === 3")
     assert len(appels.geo) == 1 and sorted(appels.geo[0]) == ["0189901C", "0379901B", "0459901A", "0459998Q"]
@@ -207,6 +209,22 @@ def test_couleurs_camembert_et_legende(page_prete):
     leg.locator('[data-cat="Stagiaire"]').click()
     assert len(etat(page, "visibles")) == 4
     expect(leg.locator('[data-cat="Stagiaire"]')).to_have_class(re.compile("masque"))
+    # le choix actuel est en haut, coché, et se retire en un clic
+    page.locator("#b-couleurs").click()
+    premier = m.locator('input[name="cc-col"]').first
+    expect(premier).to_have_value("Grade"); expect(premier).to_be_checked()
+    expect(m.locator(".choix").first).to_contain_text("choix actuel")
+    page.locator("#cc-retirer").click()
+    expect(page.locator("#lib-couleur")).to_have_text("aucune")
+    expect(leg.locator(".leg-item")).to_have_count(1)
+    page.wait_for_function("window.__grist.options.couleur.source === 'aucune'")
+    # la croix de la légende fait de même
+    page.locator("#b-couleurs").click()
+    m.locator('input[name="cc-col"][value="Grade"]').check(); page.locator("#cc-suivant").click(); page.locator("#cc-appliquer").click()
+    expect(leg.locator(".leg-item")).to_have_count(4)
+    leg.get_by_role("button", name="Retirer les couleurs").click()
+    expect(leg.locator(".leg-item")).to_have_count(1)
+    page.locator("#b-couleurs").click(); m.locator('input[name="cc-col"][value="Grade"]').check(); page.locator("#cc-suivant").click(); page.locator("#cc-appliquer").click()
     # couleur la plus fréquente
     page.locator("#b-couleurs").click(); page.locator("#cc-suivant").click()
     m.locator('input[name="cc-mode"][value="majoritaire"]').check(); page.locator("#cc-appliquer").click()
@@ -439,7 +457,7 @@ def test_menu_aide_et_presentation(page_prete):
     page.locator("#b-aide").click()
     expect(page.get_by_role("menuitem", name="Visite guidée")).to_be_visible()
     page.get_by_role("menuitem", name="Quoi de neuf ?").click()
-    expect(page.locator("#modale")).to_contain_text("Version 1.0.0")
+    expect(page.locator("#modale")).to_contain_text("Version 1.1.0")
     page.keyboard.press("Escape")
     page.locator("#b-presentation").click()
     expect(page.locator("#barre")).to_be_hidden()
@@ -454,5 +472,26 @@ def test_demonstration_hors_grist(navigateur, serveur):
     expect(page.locator("#bandeau-demo")).to_be_visible()
     page.wait_for_function("document.querySelectorAll('.pt').length > 10")
     expect(page.locator("#lib-couleur")).to_have_text("Grade")
+    assert erreurs == []
+    page.context.close()
+
+
+def test_points_places_par_maplibre(page_prete):
+    """Régression 1.0.0 : un style « position » sur l'élément donné à MapLibre faisait dériver les points au zoom."""
+    page, _, _ = page_prete
+    assert page.locator(".maplibregl-marker.pt").count() == 0
+    assert page.locator(".maplibregl-marker > .pt").count() == 3
+    regles = page.evaluate("""() => { const d = document.createElement('div'); d.className = 'pt-ancre'; document.body.appendChild(d);
+      const c = getComputedStyle(d); const r = [c.position, c.transform]; d.remove(); return r; }""")
+    assert regles == ["static", "none"], regles
+
+
+def test_sans_acces(navigateur, serveur):
+    page, _, erreurs = preparer(navigateur, serveur)
+    page.evaluate("window.__optionsSeules(null, 'none')")
+    expect(page.locator("#sans-acces")).to_be_visible()
+    expect(page.locator("#sans-acces")).to_contain_text("Lire la table sélectionnée")
+    envoyer(page, options=CONFIGURE)
+    expect(page.locator("#sans-acces")).to_be_hidden()
     assert erreurs == []
     page.context.close()

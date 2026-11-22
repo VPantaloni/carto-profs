@@ -12,6 +12,7 @@
     getSelectedTableId() { return Promise.resolve('Profs_maths_26_27'); },
     docApi: { applyUserActions(a) { g.actions = a; return Promise.resolve(); } }
   };
+  window.__optionsSeules = (options, acces) => { if (cbOptions) cbOptions(options, { accessLevel: acces }); };
   window.__envoyer = (lignes, options = null, acces = 'read table', mappings = null) => {
     if (cbOptions) cbOptions(options, { accessLevel: acces });
     if (cbLignes) cbLignes(lignes, mappings);

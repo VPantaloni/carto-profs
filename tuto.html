@@ -99,7 +99,7 @@ summary { cursor: pointer; font-weight: 600; }
   <div class="adresse">https://widget.forge.apps.education.fr/carto-profs/</div>
   <ol class="etapes" start="5" style="counter-reset: e 4">
     <li><span>Toujours dans le panneau de droite, accordez l’accès <b>Lire la table sélectionnée</b>. C’est tout ce qu’il faut.</span></li>
-    <li><span>La carte s’affiche. Au premier lancement, une fenêtre vous montre les colonnes reconnues (voir plus bas).</span></li>
+    <li><span>La carte s’affiche. Au premier lancement, une fenêtre vous montre les colonnes reconnues (voir plus bas) et rappelle l’accès choisi. Si le widget n’a pas accès à la table, un message indique quoi régler.</span></li>
   </ol>
   <div class="astuce">Pour essayer sans vos données : importez dans Grist le fichier <code>carto-profs-exemple.csv</code>
     (données inventées) avec <b>Nouveau → Importer depuis un fichier</b>, puis suivez les étapes ci-dessus.</div>
@@ -172,6 +172,7 @@ summary { cursor: pointer; font-weight: 600; }
     <figcaption>La fiche : liens utiles, personnes (format réglable), case pour la sélection, écrire, voir la ligne dans Grist.</figcaption>
   </figure>
   <p>Le fond de carte clair ou sombre suit le réglage de votre ordinateur ; le bouton de thème le change.</p>
+  <p>À deux doigts (ou clic droit maintenu), on peut tourner et incliner la carte. La <b>boussole</b> en bas à droite remet le nord en haut et la carte à plat.</p>
 </section>
 
 <section id="couleurs">
@@ -181,6 +182,7 @@ summary { cursor: pointer; font-weight: 600; }
     <li><span>Choisissez-en une, puis <b>Suivant</b>. Choisissez une palette (dont une adaptée au daltonisme) ; cliquez une pastille pour changer une couleur.</span></li>
     <li><span>Choisissez « Camembert » ou « Couleur la plus fréquente » pour les établissements mêlés, puis <b>Appliquer à la carte</b>.</span></li>
   </ol>
+  <p>Le <b>choix actuel</b> est toujours en haut de la liste. Pour revenir à une seule couleur : bouton <b>Retirer les couleurs</b>, ou la croix à côté du titre de la légende.</p>
   <p>Une colonne de nombres ou de dates (échelon, année de titularisation…) donne un <b>dégradé</b> en 5 classes. Une colonne <code>Couleur</code> au format <code>#rrggbb</code> peut aussi imposer la couleur de chaque personne.</p>
 </section>
 
