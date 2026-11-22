@@ -1,0 +1,279 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carto-profs — tutoriel</title>
+<style>
+:root { --accent: #33c1e8; --accent-texte: #06303d; --accent-fonce: #0a6f8c; --accent-clair: #e8f8fd; --accent-bord: #9fdff2;
+  --fond: #f9fafb; --panneau: #fff; --texte: #1f2937; --doux: #5b6370; --ligne: #e5e7eb; --alerte-fond: #fffbeb; --alerte-bord: #fcd34d; --alerte-texte: #92400e; }
+@media (prefers-color-scheme: dark) { :root { --accent-fonce: #7dd3ef; --accent-clair: #0c2f3a; --accent-bord: #1f6b80; --fond: #111418; --panneau: #1b1f26; --texte: #f3f4f6; --doux: #a1a9b5; --ligne: #374151; --alerte-fond: #3a2a0b; --alerte-bord: #a16207; --alerte-texte: #fcd34d; } }
+* { box-sizing: border-box; }
+body { margin: 0; font: 15px/1.6 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); }
+a { color: var(--accent-fonce); }
+.ic { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; vertical-align: -4px; }
+header { position: sticky; top: 0; z-index: 2; display: flex; align-items: center; gap: 12px; padding: 10px 18px; background: var(--panneau); border-bottom: 1px solid var(--ligne); }
+header .logo { width: 36px; height: 36px; border-radius: 10px; background: var(--accent); color: var(--accent-texte); display: flex; align-items: center; justify-content: center; }
+header h1 { margin: 0; font-size: 18px; flex: 1; }
+.page { display: flex; gap: 28px; max-width: 1120px; margin: 0 auto; padding: 20px 18px 60px; }
+nav { flex: 0 0 230px; position: sticky; top: 76px; align-self: flex-start; font-size: 14px; }
+nav ol { margin: 0; padding-left: 20px; display: flex; flex-direction: column; gap: 4px; }
+main { flex: 1; min-width: 0; }
+section { background: var(--panneau); border: 1px solid var(--ligne); border-radius: 14px; padding: 18px 22px; margin-bottom: 18px; }
+h2 { margin: 0 0 8px; font-size: 19px; display: flex; gap: 10px; align-items: center; }
+h2 .num { width: 30px; height: 30px; border-radius: 50%; background: var(--accent-clair); color: var(--accent-fonce); display: inline-flex; align-items: center; justify-content: center; font-size: 14px; flex: none; }
+h3 { font-size: 16px; margin: 16px 0 6px; }
+.etapes { counter-reset: e; list-style: none; padding: 0; margin: 10px 0; display: flex; flex-direction: column; gap: 8px; }
+.etapes li { counter-increment: e; display: flex; gap: 10px; }
+.etapes li::before { content: counter(e); flex: none; width: 24px; height: 24px; border-radius: 50%; background: var(--accent); color: var(--accent-texte); font-weight: 700; font-size: 13px; display: flex; align-items: center; justify-content: center; margin-top: 2px; }
+code, .k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px; background: var(--accent-clair); padding: 1px 6px; border-radius: 5px; }
+.adresse { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 10px 12px; border: 1.5px dashed var(--accent); border-radius: 10px; background: var(--accent-clair); font-family: ui-monospace, monospace; font-size: 14px; }
+.astuce, .attention { padding: 10px 14px; border-radius: 10px; margin: 10px 0; }
+.astuce { background: var(--accent-clair); border: 1px solid var(--accent-bord); }
+.attention { background: var(--alerte-fond); border: 1px solid var(--alerte-bord); color: var(--alerte-texte); }
+table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 8px 0; }
+th, td { text-align: left; padding: 7px 9px; border-bottom: 1px solid var(--ligne); vertical-align: top; }
+th { color: var(--doux); font-size: 13px; }
+figure { margin: 14px 0; }
+figcaption { color: var(--doux); font-size: 13px; margin-top: 6px; }
+.capture { position: relative; border: 1px solid var(--ligne); border-radius: 12px; background: #ece8e1; overflow: hidden; padding: 14px; color: #1f2937; font-size: 13px; }
+.capture .etiq-fictive { position: absolute; right: 8px; bottom: 6px; font-size: 11px; color: #5b6370; }
+.m-panneau { background: #fff; border: 1px solid #e5e7eb; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,.1); padding: 10px 12px; }
+.m-btn { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; border-radius: 8px; border: 1px solid #e5e7eb; background: #fff; font-size: 13px; }
+.m-btn.p { background: #33c1e8; border-color: #33c1e8; color: #06303d; font-weight: 600; }
+.m-pt { display: inline-block; width: 22px; height: 22px; border-radius: 50%; border: 2px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,.4); position: relative; vertical-align: middle; }
+.m-badge { position: absolute; right: -10px; top: -10px; min-width: 18px; height: 18px; border-radius: 9px; background: #1f2937; color: #fff; font: 700 11px/18px system-ui; text-align: center; padding: 0 4px; }
+.m-ligne { display: flex; align-items: center; gap: 8px; padding: 5px 0; border-top: 1px solid #e5e7eb; }
+.m-pastille { width: 12px; height: 12px; border-radius: 50%; flex: none; }
+.grille { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.icones { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 6px 18px; }
+.icones div { display: flex; gap: 10px; align-items: flex-start; }
+.icones .ic { flex: none; margin-top: 4px; color: var(--accent-fonce); }
+details { border: 1px solid var(--ligne); border-radius: 10px; padding: 8px 12px; margin: 8px 0; }
+summary { cursor: pointer; font-weight: 600; }
+@media (max-width: 800px) { nav { display: none; } .page { padding: 12px; } section { padding: 14px; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo" aria-hidden="true"><svg class="ic" viewBox="0 0 24 24"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg></div>
+  <h1>Carto-profs — tutoriel</h1>
+  <a href="index.html">Ouvrir la démonstration</a>
+</header>
+<div class="page">
+<nav aria-label="Sommaire"><ol>
+  <li><a href="#quoi">À quoi ça sert</a></li>
+  <li><a href="#installer">Installer dans Grist</a></li>
+  <li><a href="#table">Préparer la table</a></li>
+  <li><a href="#demarrage">Premier démarrage</a></li>
+  <li><a href="#lire">Lire la carte</a></li>
+  <li><a href="#couleurs">Colorier selon…</a></li>
+  <li><a href="#bulles">Contenu des bulles</a></li>
+  <li><a href="#chercher">Chercher, filtrer, légende</a></li>
+  <li><a href="#depart">Point de départ</a></li>
+  <li><a href="#mails">Sélection et mails</a></li>
+  <li><a href="#vues">Tableau de bord et exports</a></li>
+  <li><a href="#partager">Partager, droits, confidentialité</a></li>
+  <li><a href="#problemes">En cas de souci</a></li>
+</ol></nav>
+<main>
+
+<section id="quoi">
+  <h2><span class="num">1</span>À quoi sert Carto-profs ?</h2>
+  <p>Vous avez dans Grist une table de personnes (professeur·es, formateur·trices, membres d’un groupe de travail…) avec
+  l’<b>UAI</b> de leur établissement (on dit aussi <b>RNE</b> : 7 chiffres et 1 lettre, par exemple <code>0451234A</code>).
+  Carto-profs en fait une <b>carte</b> : un point par établissement, avec le nombre de personnes, des couleurs à votre
+  choix, une fiche par établissement et des outils pour écrire aux personnes.</p>
+  <p>Vous n’avez <b>rien à saisir</b> : le widget retrouve seul la position des établissements dans les données ouvertes du
+  ministère de l’Éducation nationale.</p>
+</section>
+
+<section id="installer">
+  <h2><span class="num">2</span>Installer le widget dans Grist</h2>
+  <ol class="etapes">
+    <li><span>Ouvrez votre document Grist et la page qui contient la table des personnes.</span></li>
+    <li><span>Cliquez sur <b>Nouveau</b> (en haut à gauche) puis <b>Ajouter une vue à la page</b>.</span></li>
+    <li><span>Choisissez <b>Personnalisé</b> comme type de vue, et <b>votre table</b> comme données (« Sélectionner les données »).</span></li>
+    <li><span>Dans le panneau de droite, choisissez <b>URL personnalisée</b> et collez l’adresse :</span></li>
+  </ol>
+  <div class="adresse">https://widget.forge.apps.education.fr/carto-profs/</div>
+  <ol class="etapes" start="5" style="counter-reset: e 4">
+    <li><span>Toujours dans le panneau de droite, accordez l’accès <b>Lire la table sélectionnée</b>. C’est tout ce qu’il faut.</span></li>
+    <li><span>La carte s’affiche. Au premier lancement, une fenêtre vous montre les colonnes reconnues (voir plus bas).</span></li>
+  </ol>
+  <div class="astuce">Pour essayer sans vos données : importez dans Grist le fichier <code>carto-profs-exemple.csv</code>
+    (données inventées) avec <b>Nouveau → Importer depuis un fichier</b>, puis suivez les étapes ci-dessus.</div>
+</section>
+
+<section id="table">
+  <h2><span class="num">3</span>Préparer la table</h2>
+  <p>Une table toute simple suffit. Les noms des colonnes sont libres : le widget les devine.</p>
+  <table>
+    <thead><tr><th>Rôle</th><th>Exemple de nom</th><th>Type Grist conseillé</th><th>Obligatoire ?</th></tr></thead>
+    <tbody>
+      <tr><td>UAI de l’établissement</td><td><code>Rne</code>, <code>UAI</code></td><td>Texte</td><td><b>oui</b></td></tr>
+      <tr><td>Nom, prénom</td><td><code>Nom</code>, <code>Prenom</code></td><td>Texte</td><td>conseillé</td></tr>
+      <tr><td>Adresse mail</td><td><code>mail_ouvert</code>, <code>Mail</code></td><td>Texte</td><td>pour écrire</td></tr>
+      <tr><td>Une colonne pour les couleurs</td><td><code>Grade</code>, <code>Discipline</code>, <code>Groupe</code></td><td>Texte ou Choix</td><td>non</td></tr>
+      <tr><td>Couleur imposée</td><td><code>Couleur</code> (valeurs <code>#2563eb</code>)</td><td>Texte</td><td>non</td></tr>
+      <tr><td>Latitude, longitude</td><td><code>Latitude</code>, <code>Longitude</code></td><td>Numérique</td><td>non (secours)</td></tr>
+    </tbody>
+  </table>
+  <div class="astuce">L’UAI doit être écrit <b>sans espace</b> : 7 chiffres puis 1 lettre majuscule. Les minuscules et les espaces autour sont corrigés tout seuls.</div>
+  <p>Toutes les autres colonnes (grade, échelon, discipline, établissement…) restent disponibles pour les couleurs, les bulles et les filtres.</p>
+</section>
+
+<section id="demarrage">
+  <h2><span class="num">4</span>Premier démarrage</h2>
+  <p>Le widget lit la table et vous montre ce qu’il a reconnu : « UAI = <code>Rne</code> (99 % des valeurs au format
+  UAI) », « Mail = <code>mail_ouvert</code> (contient des @) »… Corrigez si besoin avec les listes, puis cliquez sur
+  <b>Voir la carte</b>. Une courte <b>visite guidée</b> présente ensuite les boutons (bouton « Ne plus montrer »).</p>
+  <h3>Les UAI introuvables</h3>
+  <p>Un bandeau orange en bas à gauche signale les lignes qui ne sont pas sur la carte. En cliquant dessus :</p>
+  <ul>
+    <li><b>Format incorrect</b> : il manque un chiffre, la lettre, ou il y a un espace. Corrigez la cellule.</li>
+    <li><b>Inconnu dans l’open data</b> : l’établissement a fermé ou fusionné, ou l’UAI est mal saisi. Le lien « Chercher » ouvre l’annuaire de l’éducation.</li>
+    <li><b>Voir dans Grist</b> sélectionne la ligne dans votre table pour la corriger.</li>
+  </ul>
+  <p>Vous pouvez aussi faire le lien entre les colonnes dans le panneau de droite de Grist (rubrique des colonnes du widget) : ce choix passe alors avant celui du widget.</p>
+</section>
+
+<section id="lire">
+  <h2><span class="num">5</span>Lire la carte</h2>
+  <figure>
+    <div class="capture" role="img" aria-label="Capture fictive : trois points sur la carte">
+      <div style="display:flex;gap:36px;align-items:center;padding:16px 10px">
+        <span class="m-pt" style="background:#2563eb"></span>
+        <span class="m-pt" style="background:conic-gradient(#2563eb 0 60%, #ea580c 60% 100%);width:26px;height:26px"><span class="m-badge">5</span></span>
+        <span style="display:inline-flex;width:44px;height:44px;border-radius:50%;background:rgba(51,193,232,.25);align-items:center;justify-content:center"><span style="width:34px;height:34px;border-radius:50%;background:#33c1e8;color:#06303d;font-weight:700;display:flex;align-items:center;justify-content:center">23</span></span>
+        <span class="m-panneau" style="font-size:12px"><b>Collège Les Tilleuls (fictif)</b><br><span style="color:#5b6370">Blois · 3 personnes</span></span>
+      </div>
+      <span class="etiq-fictive">capture fictive</span>
+    </div>
+    <figcaption>Un établissement d’une seule personne ; un établissement de 5 personnes de deux catégories (camembert) ; un groupe de points proches ; la bulle de survol.</figcaption>
+  </figure>
+  <ul>
+    <li><b>Un point = un établissement.</b> Le badge noir donne le nombre de personnes.</li>
+    <li><b>Camembert</b> : si l’établissement a des personnes de couleurs différentes, le point montre la part de chaque couleur.</li>
+    <li><b>Groupes</b> : en vue éloignée, les points proches se regroupent (rond bleu avec le total). Cliquez pour zoomer. La case « Regrouper les points proches » dans la légende le désactive.</li>
+    <li><b>Survol</b> : nom, commune et nombre de personnes. <b>Clic</b> : la fiche de l’établissement à droite.</li>
+  </ul>
+  <figure>
+    <div class="capture">
+      <div class="m-panneau" style="max-width:360px">
+        <b style="font-size:15px">Lycée du Val (fictif)</b><div style="color:#5b6370;font-size:12px">Orléans · Lycée général et technologique · Public · 0459901A</div>
+        <div style="display:flex;gap:6px;margin:8px 0;flex-wrap:wrap"><span class="m-btn">Site</span><span class="m-btn">Itinéraire</span><span class="m-btn">Écrire à l’établissement</span></div>
+        <div class="m-ligne"><input type="checkbox" checked aria-label="cochée"><span class="m-pastille" style="background:#ea580c"></span><span><b>DUVAL</b> Claire — Agrégé · 18 h</span></div>
+        <div class="m-ligne"><input type="checkbox" aria-label="non cochée"><span class="m-pastille" style="background:#2563eb"></span><span><b>LEROY</b> Mehdi — Certifié · 15 h</span></div>
+      </div>
+      <span class="etiq-fictive">capture fictive</span>
+    </div>
+    <figcaption>La fiche : liens utiles, personnes (format réglable), case pour la sélection, écrire, voir la ligne dans Grist.</figcaption>
+  </figure>
+  <p>Le fond de carte clair ou sombre suit le réglage de votre ordinateur ; le bouton de thème le change.</p>
+</section>
+
+<section id="couleurs">
+  <h2><span class="num">6</span>Colorier selon…</h2>
+  <ol class="etapes">
+    <li><span>Cliquez sur <b>Colorier</b>. Le widget a regardé vos colonnes et propose celles qui font de bonnes catégories, avec un aperçu : « 5 valeurs : Certifié (50), Agrégé (15)… ».</span></li>
+    <li><span>Choisissez-en une, puis <b>Suivant</b>. Choisissez une palette (dont une adaptée au daltonisme) ; cliquez une pastille pour changer une couleur.</span></li>
+    <li><span>Choisissez « Camembert » ou « Couleur la plus fréquente » pour les établissements mêlés, puis <b>Appliquer à la carte</b>.</span></li>
+  </ol>
+  <p>Une colonne de nombres ou de dates (échelon, année de titularisation…) donne un <b>dégradé</b> en 5 classes. Une colonne <code>Couleur</code> au format <code>#rrggbb</code> peut aussi imposer la couleur de chaque personne.</p>
+</section>
+
+<section id="bulles">
+  <h2><span class="num">7</span>Contenu des bulles</h2>
+  <p>Le bouton <b>Bulles</b> règle ce que l’on voit, avec un aperçu sur un vrai établissement de votre table :</p>
+  <ul>
+    <li><b>Survol</b> : commune, type d’établissement, nombre de personnes.</li>
+    <li><b>Ligne d’une personne</b> : cochez les colonnes à montrer et rangez-les avec les flèches ; le <b>modèle</b> se remplit tout seul, par exemple <code>{Nom} {Prenom} — {Grade} · {nbre_heure} h</code>. Vous pouvez l’écrire vous-même : le texte entre accolades est remplacé par la valeur de la colonne. Si une valeur est vide, le séparateur disparaît.</li>
+    <li><b>Liens et tri</b> : lien « écrire » sur chaque personne, bouton « voir la ligne dans Grist », ordre des personnes.</li>
+  </ul>
+  <div class="attention">Toutes les colonnes peuvent apparaître dans les bulles, y compris des informations personnelles (date de naissance, notes, téléphone…). Tout lecteur du document les verra : ne cochez que ce qui est utile.</div>
+</section>
+
+<section id="chercher">
+  <h2><span class="num">8</span>Chercher, filtrer, légende</h2>
+  <ul>
+    <li><b>Recherche</b> (en haut à gauche) : un nom, un établissement, un UAI ou une commune ; flèches puis Entrée. La carte s’y place et ouvre la fiche.</li>
+    <li><b>Légende</b> : cliquez une catégorie pour la masquer ou la montrer. Le nombre à droite compte les personnes.</li>
+    <li><b>Filtrer</b> : choisissez une colonne (statut, département…) puis décochez des valeurs. « Retirer le filtre » remet tout.</li>
+    <li><b>Fond d’établissements</b> (dans la légende) : affiche en gris tous les établissements d’une académie, filtrables par type (écoles, collèges, lycées, EREA) et par secteur (public, privé).</li>
+  </ul>
+</section>
+
+<section id="depart">
+  <h2><span class="num">9</span>Point de départ</h2>
+  <p>Le bouton <b>Départ</b> place votre commune ou votre bureau (recherche d’adresse, ou clic sur la carte). La carte trace
+  des cercles de 10, 20 et 50 km ; la fiche et la liste donnent la <b>distance à vol d’oiseau</b> ; le lien « Itinéraire »
+  part de ce point. Ce réglage reste dans votre navigateur : chaque lecteur a le sien.</p>
+</section>
+
+<section id="mails">
+  <h2><span class="num">10</span>Sélection et mails</h2>
+  <h3>Composer la sélection</h3>
+  <ul>
+    <li>Dans une fiche : cochez des personnes, ou la case du haut pour tout l’établissement.</li>
+    <li>Sur la carte : bouton <b>Sélectionner</b>, puis faites glisser un rectangle autour des établissements.</li>
+    <li>Dans la liste du tableau de bord : cochez des établissements.</li>
+  </ul>
+  <p>Une barre en bas rappelle « Sélection : 7 personnes dans 3 établissements », avec <b>Écrire…</b>, <b>Copier les adresses</b> et la croix pour vider.</p>
+  <h3>Écrire</h3>
+  <figure>
+    <div class="capture"><div class="m-panneau" style="max-width:420px">
+      <b>À qui ?</b>
+      <div style="margin:6px 0;padding:6px 8px;border:1.5px solid #33c1e8;border-radius:8px;background:#e8f8fd">● Les 7 personnes de la sélection</div>
+      <div style="margin:6px 0;padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px">○ Les 3 établissements de la sélection</div>
+      <div style="margin:6px 0;padding:6px 8px;border:1px solid #e5e7eb;border-radius:8px">○ Les personnes, avec leur établissement en copie</div>
+      <div style="display:flex;gap:6px;justify-content:flex-end;margin-top:8px"><span class="m-btn">Copier les adresses</span><span class="m-btn p">Ouvrir ma messagerie</span></div>
+    </div><span class="etiq-fictive">capture fictive</span></div>
+  </figure>
+  <ul>
+    <li><b>À qui</b> : la sélection, toutes les personnes affichées, les établissements (adresse de l’annuaire de l’éducation, sinon <code>ce.UAI@ac-….fr</code>), ou les personnes avec leur établissement en copie.</li>
+    <li>Les adresses sont en <b>Cci</b> par défaut : personne ne voit les autres adresses.</li>
+    <li>Les personnes sans adresse sont listées. Au-delà de 40 adresses, l’envoi est découpé en <b>lots</b> à ouvrir l’un après l’autre (limite des messageries).</li>
+    <li>Le message s’ouvre dans <b>votre</b> messagerie : rien n’est envoyé par le widget. Si rien ne s’ouvre, utilisez « Copier les adresses » et collez-les dans votre messagerie (webmail académique, par exemple).</li>
+  </ul>
+</section>
+
+<section id="vues">
+  <h2><span class="num">11</span>Tableau de bord, liste et exports</h2>
+  <div class="icones">
+    <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg><span><b>Tableau de bord</b> : personnes par département, par type d’établissement, par catégorie.</span></div>
+    <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h.01"/><path d="M3 18h.01"/><path d="M3 6h.01"/><path d="M8 12h13"/><path d="M8 18h13"/><path d="M8 6h13"/></svg><span><b>Liste</b> des établissements, triable, utilisable au clavier (alternative à la carte).</span></div>
+    <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg><span><b>Exporter</b> : image PNG avec légende, CSV des établissements (avec coordonnées) ou des personnes, impression A4 paysage.</span></div>
+    <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3"/><path d="M21 8V5a2 2 0 0 0-2-2h-3"/><path d="M3 16v3a2 2 0 0 0 2 2h3"/><path d="M16 21h3a2 2 0 0 0 2-2v-3"/></svg><span><b>Présentation</b> : plein écran sans menus, pour une réunion. Échap pour quitter.</span></div>
+    <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M9 3v18"/><path d="M15 3v18"/></svg><span><b>Colonnes</b> : revoir les colonnes utilisées, les UAI introuvables, et (option) écrire les coordonnées dans la table.</span></div>
+    <div><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 18a6 6 0 0 0 0-12v12z"/></svg><span><b>Thème</b> : automatique, clair ou sombre.</span></div>
+  </div>
+  <p>Le <b>(?)</b> bleu en haut à droite relance la visite guidée, ouvre ce tutoriel et liste les nouveautés.</p>
+</section>
+
+<section id="partager">
+  <h2><span class="num">12</span>Partager, droits, confidentialité</h2>
+  <ul>
+    <li><b>Droits du widget</b> : « Lire la table sélectionnée » suffit. Le widget ne crée rien et n’écrit rien dans le document.</li>
+    <li><b>Option « Écrire les coordonnées »</b> (bouton Colonnes) : ajoute deux colonnes Latitude et Longitude à la table et les remplit. Elle demande l’accès <b>complet</b> au document : à n’activer que si vous en avez l’usage.</li>
+    <li><b>Réglages partagés</b> : couleurs, bulles, fond d’établissements… sont gardés <b>dans le document</b>. Tous ses lecteurs voient la même carte. Seules les personnes qui peuvent modifier le document les enregistrent ; un lecteur peut les changer pour sa session.</li>
+    <li><b>Préférences personnelles</b> (point de départ, thème, visite guidée) : gardées dans votre navigateur.</li>
+    <li><b>Partager la carte</b> : partagez le document Grist en lecture (bouton Partager de Grist). Le widget marche pour un lecteur sans droit d’écriture.</li>
+    <li><b>Ce qui sort du navigateur</b> : seulement les <b>UAI</b>, envoyés aux données ouvertes de l’Éducation nationale pour trouver les positions, et l’adresse tapée pour le point de départ (service d’adresses de l’IGN). Les noms, mails et autres colonnes ne quittent jamais votre ordinateur. Une copie des positions des établissements (pas des personnes) est gardée 30 jours dans le navigateur.</li>
+  </ul>
+</section>
+
+<section id="problemes">
+  <h2><span class="num">13</span>En cas de souci</h2>
+  <details><summary>La carte reste vide</summary><p>Vérifiez que la vue Personnalisé est bien liée à votre table et que l’accès « Lire la table sélectionnée » est accordé. Ouvrez le bouton Colonnes : la colonne UAI doit être choisie.</p></details>
+  <details><summary>« Les données ouvertes ne répondent pas »</summary><p>Le site data.education.gouv.fr est momentanément indisponible ou bloqué par votre réseau. Cliquez sur « Réessayer l’open data » plus tard. Les établissements déjà trouvés restent affichés (copie du navigateur).</p></details>
+  <details><summary>Un établissement est mal placé</summary><p>La position vient de l’open data. Pour la corriger, ajoutez des colonnes <code>Latitude</code> et <code>Longitude</code> à la table et remplissez-les pour cette ligne : elles passent avant l’open data.</p></details>
+  <details><summary>Le bouton « Écrire » n’ouvre rien</summary><p>Votre navigateur n’a pas de messagerie par défaut. Utilisez « Copier les adresses » et collez-les dans votre messagerie, en Cci.</p></details>
+  <details><summary>Mes réglages ne sont pas gardés</summary><p>Vous n’avez que le droit de lecture sur le document : demandez à son propriétaire de faire les réglages, ou de vous donner le droit de modifier.</p></details>
+</section>
+<p style="color:var(--doux);font-size:13px">Carto-profs — widget libre (licence EUPL 1.2) du groupe <a href="https://forge.apps.education.fr/widget">widget</a> de la Forge des communs numériques éducatifs.
+Fond de carte © OpenFreeMap, © contributeurs OpenStreetMap ; positions et annuaire : data.education.gouv.fr (Licence Ouverte) ; icônes Lucide (ISC).</p>
+</main>
+</div>
+</body>
+</html>

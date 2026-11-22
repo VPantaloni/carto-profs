@@ -1,0 +1,13 @@
+# Publication du widget avec GitLab Pages : https://widget.forge.apps.education.fr/carto-profs/
+pages:
+  stage: deploy
+  image: alpine:latest
+  script:
+    - mkdir -p public
+    - cp index.html tuto.html public/
+    - cp -r exemple public/
+  artifacts:
+    paths:
+      - public
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

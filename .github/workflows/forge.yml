@@ -1,0 +1,20 @@
+# Recopie du dépôt GitHub vers la Forge des communs numériques éducatifs.
+# Le jeton est un secret du dépôt GitHub (Settings → Secrets and variables → Actions → FORGE_TOKEN), jamais dans le code.
+name: Recopie vers la Forge
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+jobs:
+  recopie:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Pousser vers forge.apps.education.fr/widget/carto-profs
+        env:
+          FORGE_TOKEN: ${{ secrets.FORGE_TOKEN }}
+        run: |
+          if [ -z "$FORGE_TOKEN" ]; then echo "Secret FORGE_TOKEN absent : recopie ignorée."; exit 0; fi
+          git push --force "https://oauth2:${FORGE_TOKEN}@forge.apps.education.fr/widget/carto-profs.git" HEAD:main
