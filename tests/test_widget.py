@@ -84,7 +84,7 @@ def preparer(navigateur, serveur, taille=(1280, 800), grist=True, opendata_ko=Fa
         return route.fulfill(json={"total_count": len(res), "results": res})
     page.route("https://data.education.gouv.fr/**", opendata)
     page.route("https://data.geopf.fr/**", lambda r: r.fulfill(json={"features": [{"properties": {"label": "Orléans 45000", "city": "Orléans"}, "geometry": {"coordinates": [1.909, 47.902]}}]}))
-    page.goto(serveur + "/index.html")
+    page.goto(serveur + ("/index.html" if grist else "/index.html?demo"))
     page.wait_for_function("window.cartoProfs")
     return page, appels, erreurs
 
@@ -704,3 +704,25 @@ def test_zones_de_remplacement(navigateur, serveur):
     assert ["fitBounds", 6] in dernier, dernier     # 3 établissements + 3 ZR
     assert erreurs == []
     page.context.close()
+
+
+def test_page_accueil(navigateur, serveur):
+    """Hors de Grist, l'adresse du widget mène à la page d'accueil ; la démonstration y est intégrée avec ?demo."""
+    ctx = navigateur.new_context(viewport={"width": 1200, "height": 900})
+    page = ctx.new_page()
+    erreurs = []
+    page.on("pageerror", lambda e: erreurs.append(str(e)))
+    page.route("https://cdn.jsdelivr.net/**", lambda r: r.fulfill(body=(TESTS / "faux-maplibre.js").read_text() if r.request.url.endswith(".js") else "", content_type="text/javascript"))
+    page.route("https://docs.getgrist.com/**", lambda r: r.fulfill(body="", content_type="text/javascript"))
+    page.route("https://tiles.openfreemap.org/**", lambda r: r.abort())
+    page.route("https://data.education.gouv.fr/**", lambda r: r.fulfill(json={"results": []}))
+    page.goto(serveur + "/index.html")
+    page.wait_for_url(re.compile(r"/accueil\.html$"))
+    expect(page.get_by_role("heading", level=1)).to_have_text("Carto-profs")
+    expect(page.locator("#url-widget")).to_have_text("https://widget.forge.apps.education.fr/carto-profs/")
+    expect(page.get_by_role("link", name="télécharger carto-profs-exemple.csv")).to_have_attribute("href", "exemple/carto-profs-exemple.csv")
+    demo = page.frame_locator("iframe")
+    expect(demo.locator("#bandeau-demo")).to_be_visible()
+    expect(demo.locator(".pt").first).to_be_attached()
+    assert erreurs == [], erreurs
+    ctx.close()

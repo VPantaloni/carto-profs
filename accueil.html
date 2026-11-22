@@ -1,0 +1,167 @@
+<!doctype html>
+<html lang="fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Carto-profs — la carte de vos équipes dans Grist</title>
+<meta name="description" content="Widget Grist libre : une carte interactive des professeur·es et de leurs établissements, à partir de l’UAI.">
+<link rel="icon" href="logo.svg" type="image/svg+xml">
+<style>
+:root { --accent: #33c1e8; --accent-texte: #06303d; --accent-fonce: #0a6f8c; --accent-clair: #e8f8fd; --accent-bord: #9fdff2;
+  --fond: #f9fafb; --panneau: #fff; --texte: #1f2937; --doux: #5b6370; --ligne: #e5e7eb; }
+@media (prefers-color-scheme: dark) { :root { --accent-fonce: #7dd3ef; --accent-clair: #0c2f3a; --accent-bord: #1f6b80; --fond: #111418; --panneau: #1b1f26; --texte: #f3f4f6; --doux: #a1a9b5; --ligne: #374151; } }
+* { box-sizing: border-box; }
+body { margin: 0; font: 16px/1.6 Inter, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif; color: var(--texte); background: var(--fond); }
+a { color: var(--accent-fonce); }
+.ic { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; flex: none; }
+.page { max-width: 1080px; margin: 0 auto; padding: 0 20px; }
+header.haut { background: linear-gradient(180deg, var(--accent-clair), var(--fond)); border-bottom: 1px solid var(--ligne); }
+.heros { display: flex; gap: 28px; align-items: center; padding: 48px 0 40px; flex-wrap: wrap; }
+.heros img { width: 112px; height: 112px; flex: none; }
+.heros h1 { margin: 0; font-size: 42px; line-height: 1.1; letter-spacing: -.01em; }
+.heros p { margin: 10px 0 0; font-size: 19px; color: var(--doux); max-width: 640px; }
+.boutons { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 20px; }
+.btn { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; padding: 0 16px; border-radius: 10px; border: 1px solid var(--ligne); background: var(--panneau); color: var(--texte); font: inherit; font-weight: 600; text-decoration: none; cursor: pointer; }
+.btn:hover { border-color: var(--accent); }
+.btn.primaire { background: var(--accent); border-color: var(--accent); color: var(--accent-texte); }
+.btn.primaire:hover { filter: brightness(.96); }
+:focus-visible { outline: 3px solid var(--accent); outline-offset: 2px; }
+section { padding: 40px 0 8px; }
+h2 { font-size: 26px; margin: 0 0 6px; }
+.chapeau { color: var(--doux); margin: 0 0 18px; }
+.etapes { list-style: none; counter-reset: e; padding: 0; margin: 0; display: grid; gap: 12px; }
+.etapes li { counter-increment: e; display: flex; gap: 14px; background: var(--panneau); border: 1px solid var(--ligne); border-radius: 14px; padding: 14px 16px; }
+.etapes li::before { content: counter(e); flex: none; width: 32px; height: 32px; border-radius: 50%; background: var(--accent); color: var(--accent-texte); font-weight: 700; display: flex; align-items: center; justify-content: center; }
+.etapes div > b { display: block; }
+.etapes span { color: var(--doux); }
+.adresse { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 16px; padding: 12px 14px; border: 2px dashed var(--accent); border-radius: 12px; background: var(--accent-clair); }
+.adresse code { font: 600 16px ui-monospace, SFMono-Regular, Menlo, monospace; flex: 1 1 320px; overflow-wrap: anywhere; }
+code.k { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 14px; background: var(--accent-clair); padding: 1px 6px; border-radius: 5px; }
+.demo { border: 1px solid var(--ligne); border-radius: 16px; overflow: hidden; background: var(--panneau); box-shadow: 0 10px 30px rgba(0,0,0,.08); }
+.demo iframe { display: block; width: 100%; height: 600px; border: 0; }
+.demo .legende-demo { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; padding: 10px 14px; border-top: 1px solid var(--ligne); color: var(--doux); font-size: 14px; }
+.cartes { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 14px; }
+.carte { background: var(--panneau); border: 1px solid var(--ligne); border-radius: 14px; padding: 16px; }
+.carte .ico { width: 40px; height: 40px; border-radius: 10px; background: var(--accent-clair); color: var(--accent-fonce); display: flex; align-items: center; justify-content: center; margin-bottom: 10px; }
+.carte h3 { margin: 0 0 4px; font-size: 17px; }
+.carte p { margin: 0; color: var(--doux); font-size: 15px; }
+.deux { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 14px; }
+.encadre { background: var(--panneau); border: 1px solid var(--ligne); border-radius: 14px; padding: 16px 18px; }
+.encadre h3 { margin: 0 0 6px; font-size: 17px; display: flex; gap: 8px; align-items: center; }
+.encadre ul { margin: 0; padding-left: 20px; }
+.liens { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.liens a { display: flex; gap: 12px; align-items: flex-start; background: var(--panneau); border: 1px solid var(--ligne); border-radius: 14px; padding: 14px 16px; text-decoration: none; color: var(--texte); }
+.liens a:hover { border-color: var(--accent); }
+.liens .ic { color: var(--accent-fonce); margin-top: 2px; }
+.liens b { display: block; }
+.liens span { color: var(--doux); font-size: 14px; }
+footer { margin-top: 48px; padding: 24px 0 40px; border-top: 1px solid var(--ligne); color: var(--doux); font-size: 14px; }
+.toast { position: fixed; left: 50%; bottom: 24px; transform: translateX(-50%); background: #1f2937; color: #fff; padding: 10px 16px; border-radius: 10px; }
+@media (max-width: 640px) { .heros { padding: 32px 0 28px; } .heros h1 { font-size: 32px; } .heros img { width: 80px; height: 80px; } .demo iframe { height: 520px; } }
+</style>
+</head>
+<body>
+<header class="haut">
+  <div class="page heros">
+    <img src="logo.svg" alt="">
+    <div>
+      <h1>Carto-profs</h1>
+      <p>La <b>carte interactive</b> de vos professeur·es, formateur·trices ou groupes de travail, directement dans Grist.
+        Il suffit de l’<b>UAI</b> de leur établissement : le widget retrouve seul les positions dans les données ouvertes de l’Éducation nationale.</p>
+      <div class="boutons">
+        <a class="btn primaire" href="#demarrer"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M4.5 16.5c-1.5 1.26-2 5-2 5s3.74-.5 5-2c.71-.84.7-2.13-.09-2.91a2.18 2.18 0 0 0-2.91-.09z"/><path d="m12 15-3-3a22 22 0 0 1 2-3.95A12.88 12.88 0 0 1 22 2c0 2.72-.78 7.5-6 11a22.35 22.35 0 0 1-4 2z"/><path d="M9 12H4s.55-3.03 2-4c1.62-1.08 5 0 5 0"/><path d="M12 15v5s3.03-.55 4-2c1.08-1.62 0-5 0-5"/></svg>Démarrage rapide</a>
+        <a class="btn" href="index.html?demo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg>Démonstration plein écran</a>
+        <a class="btn" href="tuto.html"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg>Tutoriel</a>
+      </div>
+    </div>
+  </div>
+</header>
+
+<main class="page">
+<section id="demarrer" aria-labelledby="t-demarrer">
+  <h2 id="t-demarrer">Démarrage rapide</h2>
+  <p class="chapeau">Votre carte en 5 minutes, avec votre table ou avec des données d’exemple inventées.</p>
+  <ol class="etapes">
+    <li><div><b>Préparer une table de personnes</b><span>Une colonne avec l’UAI (RNE) de l’établissement suffit ; nom, prénom et mail sont conseillés. Pour essayer : <a href="exemple/carto-profs-exemple.csv" download>télécharger carto-profs-exemple.csv</a>, puis dans <a href="https://grist.numerique.gouv.fr" target="_blank" rel="noopener">Grist</a> : Ajouter → Importer depuis un fichier.</span></div></li>
+    <li><div><b>Ajouter une vue Personnalisé</b><span>Dans la page de la table : Nouveau → Ajouter une vue à la page → type <b>Personnalisé</b>, données : <b>votre table</b>.</span></div></li>
+    <li><div><b>Coller l’adresse du widget</b><span>Panneau de droite → <b>URL personnalisée</b> : l’adresse ci-dessous.</span></div></li>
+    <li><div><b>Accorder l’accès</b><span><b>Lire la table sélectionnée</b> suffit pour la carte ; <b>Accès complet au document</b> pour les groupes de personnes.</span></div></li>
+    <li><div><b>Se laisser guider</b><span>Le widget reconnaît vos colonnes et propose une visite guidée ; le bouton <b>(?)</b> en haut à droite rouvre la visite et le tutoriel.</span></div></li>
+  </ol>
+  <div class="adresse">
+    <code id="url-widget">https://widget.forge.apps.education.fr/carto-profs/</code>
+    <button class="btn primaire" id="copier" type="button"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>Copier</button>
+  </div>
+</section>
+
+<section aria-labelledby="t-coup">
+  <h2 id="t-coup">Le widget en un coup d’œil</h2>
+  <p class="chapeau">Démonstration en direct avec des données fictives : survolez, cliquez sur un point, essayez « Colorier » ou « Groupes ».</p>
+  <div class="demo">
+    <iframe src="index.html?demo" title="Démonstration de Carto-profs avec des données fictives" loading="lazy"></iframe>
+    <div class="legende-demo">Données entièrement inventées ; rien n’est enregistré.<a href="index.html?demo" target="_blank" rel="noopener" style="margin-left:auto">Ouvrir en plein écran</a></div>
+  </div>
+</section>
+
+<section aria-labelledby="t-quoi">
+  <h2 id="t-quoi">Ce que fait Carto-profs</h2>
+  <p class="chapeau">Pensé pour des personnes qui débutent avec Grist : des assistants plutôt que des réglages.</p>
+  <div class="cartes">
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 10c0 4.993-5.539 10.193-7.399 11.799a1 1 0 0 1-1.202 0C9.539 20.193 4 14.993 4 10a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/></svg></div>
+      <h3>Placement automatique</h3><p>Un point par établissement, retrouvé par l’UAI en open data ; badge du nombre de personnes, regroupement des points proches.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="13.5" cy="6.5" r=".5" fill="currentColor"/><circle cx="17.5" cy="10.5" r=".5" fill="currentColor"/><circle cx="8.5" cy="7.5" r=".5" fill="currentColor"/><circle cx="6.5" cy="12.5" r=".5" fill="currentColor"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.965 6.012 17.461 2 12 2z"/></svg></div>
+      <h3>Colorier selon…</h3><p>Le widget propose les colonnes qui font de bonnes catégories (grade, discipline…) ; camembert quand les couleurs se mêlent, légende cliquable.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg></div>
+      <h3>Fiches et bulles</h3><p>Fiche de chaque établissement avec ses personnes, au format choisi avec un aperçu en direct ; site, itinéraire, ligne dans Grist.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+      <h3>Groupes</h3><p>Formateur·trices, tuteur·trices… : collez une liste de mails ou de noms, le widget retrouve les personnes et vous fait valider les doutes.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg></div>
+      <h3>Sélection et mails</h3><p>Entourez des établissements ou cochez des personnes, puis écrivez-leur (ou à leur établissement) depuis votre messagerie, en Cci.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M22 12h-4"/><path d="M6 12H2"/><path d="M12 6V2"/><path d="M12 22v-4"/></svg></div>
+      <h3>Distances et zones</h3><p>Point de départ avec cercles de 10, 20, 50 km ; zones de remplacement rangées autour des départements ; contours des départements.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M3 3v16a2 2 0 0 0 2 2h16"/><path d="M18 17V9"/><path d="M13 17V5"/><path d="M8 17v-3"/></svg></div>
+      <h3>Tableau de bord</h3><p>Personnes par département, par type d’établissement, par catégorie ; liste accessible au clavier.</p></div>
+    <div class="carte"><div class="ico"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 18v-6"/><path d="m9 15 3 3 3-3"/></svg></div>
+      <h3>Exports et présentation</h3><p>Image PNG avec légende, CSV, impression A4, mode plein écran pour une réunion.</p></div>
+  </div>
+</section>
+
+<section aria-labelledby="t-donnees">
+  <h2 id="t-donnees">Vos données</h2>
+  <div class="deux">
+    <div class="encadre"><h3><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>Ce qui sort de votre navigateur</h3>
+      <ul><li>Seulement les <b>UAI</b>, envoyés aux données ouvertes de l’Éducation nationale pour trouver les positions.</li>
+        <li>Jamais les noms, mails ou autres colonnes. Les mails s’ouvrent dans votre messagerie : le widget n’envoie rien.</li></ul></div>
+    <div class="encadre"><h3><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg>Droits</h3>
+      <ul><li><b>Lire la table sélectionnée</b> : la carte ; le widget ne modifie rien.</li>
+        <li><b>Accès complet</b> : seulement pour les groupes (deux tables créées dans le document) ou pour écrire les coordonnées.</li>
+        <li>Les réglages suivent le document : tous ses lecteurs voient la même carte.</li></ul></div>
+  </div>
+</section>
+
+<section aria-labelledby="t-plus">
+  <h2 id="t-plus">En savoir plus</h2>
+  <div class="liens">
+    <a href="tuto.html"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 7v14"/><path d="M3 18a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1h5a4 4 0 0 1 4 4 4 4 0 0 1 4-4h5a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1h-6a3 3 0 0 0-3 3 3 3 0 0 0-3-3z"/></svg><div><b>Tutoriel</b><span>Pas à pas, avec captures, pour les usager·es.</span></div></a>
+    <a href="index.html?demo" target="_blank" rel="noopener"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M14.106 5.553a2 2 0 0 0 1.788 0l3.659-1.83A1 1 0 0 1 21 4.619v12.764a1 1 0 0 1-.553.894l-4.553 2.277a2 2 0 0 1-1.788 0l-4.212-2.106a2 2 0 0 0-1.788 0l-3.659 1.83A1 1 0 0 1 3 19.381V6.618a1 1 0 0 1 .553-.894l4.553-2.277a2 2 0 0 1 1.788 0z"/><path d="M15 5.764v15"/><path d="M9 3.236v15"/></svg><div><b>Démonstration</b><span>Le widget en plein écran, avec des données fictives.</span></div></a>
+    <a href="https://forge.apps.education.fr/widget/carto-profs/-/blob/main/README.md"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/></svg><div><b>Installation détaillée et code (Forge)</b><span>README, colonnes attendues, droits, licence EUPL 1.2.</span></div></a>
+  </div>
+</section>
+</main>
+
+<footer>
+  <div class="page">Carto-profs — widget libre (licence EUPL 1.2) du groupe <a href="https://forge.apps.education.fr/widget">widget</a> de la Forge des communs numériques éducatifs.
+    Fond de carte © OpenFreeMap, © contributeurs OpenStreetMap ; contours des départements d’après Admin Express © IGN ; données data.education.gouv.fr (Licence Ouverte) ; icônes Lucide (ISC).</div>
+</footer>
+<div class="toast" id="toast" role="status" aria-live="polite" hidden></div>
+<script>
+document.getElementById('copier').addEventListener('click', async () => {
+  const url = document.getElementById('url-widget').textContent.trim();
+  try { await navigator.clipboard.writeText(url); }
+  catch (e) { const t = document.createElement('textarea'); t.value = url; document.body.appendChild(t); t.select(); try { document.execCommand('copy'); } catch (e2) {} t.remove(); }
+  const m = document.getElementById('toast'); m.textContent = 'Adresse copiée : collez-la dans Grist (URL personnalisée).'; m.hidden = false;
+  setTimeout(() => { m.hidden = true; }, 3000);
+});
+</script>
+</body>
+</html>

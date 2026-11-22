@@ -4,7 +4,7 @@ pages:
   image: alpine:latest
   script:
     - mkdir -p public
-    - cp index.html tuto.html departements.geojson public/
+    - cp index.html accueil.html tuto.html departements.geojson logo.svg logo.png public/
     - cp -r exemple public/
   artifacts:
     paths:

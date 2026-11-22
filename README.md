@@ -10,8 +10,9 @@ Carto-profs transforme une table Grist de personnes (professeur·es, formateur·
 en **carte interactive** : un point par établissement, retrouvé tout seul dans les données ouvertes de l’Éducation
 nationale à partir de l’**UAI** (RNE). Couleurs au choix, fiches, recherche, filtres, distances, envoi de mails,
 tableau de bord et exports. Tutoriel pour les usager·es : [`tuto.html`](https://widget.forge.apps.education.fr/carto-profs/tuto.html)
-(aussi ouvert par le **(?)** en haut à droite du widget). Démonstration avec des données fictives :
-[ouvrir le widget](https://widget.forge.apps.education.fr/carto-profs/) hors de Grist.
+(aussi ouvert par le **(?)** en haut à droite du widget). Page d’accueil avec démonstration intégrée :
+[widget.forge.apps.education.fr/carto-profs](https://widget.forge.apps.education.fr/carto-profs/) ouverte dans un onglet
+(hors de Grist, l’adresse du widget mène à `accueil.html` ; la démonstration seule : `index.html?demo`).
 
 ## Démarrage rapide
 

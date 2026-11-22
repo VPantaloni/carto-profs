@@ -460,7 +460,10 @@ const local = {
 };
 
 // ------------------------------------------------------------------------------------------------ état
-const DANS_GRIST = typeof grist !== 'undefined' && (window.self !== window.top || window.__FAUX_GRIST__ === true);
+// ?demo : démonstration (page d’accueil, lien « Démonstration ») ; adresse ouverte seule dans un onglet → page d’accueil.
+const DEMANDE_DEMO = new URLSearchParams(location.search).has('demo');
+const DANS_GRIST = !DEMANDE_DEMO && typeof grist !== 'undefined' && (window.self !== window.top || window.__FAUX_GRIST__ === true);
+if (!DANS_GRIST && !DEMANDE_DEMO && window.self === window.top && !window.__FAUX_GRIST__) location.replace(new URL('accueil.html', location.href).href);
 function reglagesParDefaut() {
   return {
     version: 1, configure: false, colonnes: {},
@@ -2370,6 +2373,7 @@ const VISITE = [
 ];
 let etapeVisite = -1;
 function lancerVisiteSiBesoin() {
+  if (DEMANDE_DEMO && window.self !== window.top) return;   // démonstration intégrée à la page d’accueil : pas de visite
   const v = local.lire('visite', { n: 0, finie: false });
   if (v.finie || v.n >= 3 || !$('modale-fond').hidden) return;
   v.n++; local.ecrire('visite', v); lancerVisite();
