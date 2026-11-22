@@ -126,6 +126,15 @@ a { color: var(--accent-fonce); }
 .pt.actif { box-shadow: 0 0 0 3px var(--accent), 0 1px 3px rgba(0,0,0,.4); }
 .pt.choisi::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px dashed var(--accent); }
 .badge { position: absolute; right: -10px; top: -10px; min-width: 18px; height: 18px; padding: 0 4px; border-radius: 9px; background: #1f2937; color: #fff; font: 700 11px/18px Inter, system-ui, sans-serif; text-align: center; pointer-events: none; }
+.zr-ancre { line-height: 0; }
+.zr-ancre:hover, .zr-ancre:focus-within { z-index: 2; }
+.zr { display: inline-flex; align-items: center; gap: 6px; padding: 4px 6px 4px 6px; border-radius: 999px; border: 1.5px dashed var(--doux); background: var(--panneau); color: var(--texte); font: 600 12px/1.2 Inter, system-ui, sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,.25); cursor: pointer; white-space: nowrap; }
+.zr .pastille { width: 14px; height: 14px; }
+.zr .zr-n { min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px; background: #1f2937; color: #fff; font-size: 11px; line-height: 18px; text-align: center; }
+.zr:hover, .zr:focus-visible { border-style: solid; border-color: var(--accent); }
+.zr.actif { border: 2px solid var(--accent); }
+.zr.choisi { outline: 2px dashed var(--accent); outline-offset: 3px; }
+.ctrl-recadrer { display: flex !important; align-items: center; justify-content: center; color: #333; }
 .groupe-pt { display: flex; align-items: center; justify-content: center; border-radius: 50%; border: 0; background: rgba(51,193,232,.25); cursor: pointer; padding: 0; }
 .groupe-pt span { display: flex; align-items: center; justify-content: center; width: calc(100% - 10px); height: calc(100% - 10px); border-radius: 50%; background: var(--accent); color: var(--accent-texte); font-weight: 700; }
 .etiquette-rayon { font-size: 11px; font-weight: 700; color: var(--accent-fonce); text-shadow: 0 0 3px var(--panneau), 0 0 3px var(--panneau); pointer-events: none; }
@@ -336,8 +345,13 @@ body.presentation .legende { top: 12px; }
 // Carto-profs — carte des personnes d'une table Grist, placées par l'UAI de leur établissement (open data).
 // Un seul fichier, sans étape de construction. Icônes : Lucide (https://lucide.dev, licence ISC).
 // ============================================================================================================
-const VERSION = '1.2.0';
+const VERSION = '1.3.0';
 const NOUVEAUTES = [
+  { version: '1.3.0', date: 'novembre 2026', points: [
+    'Bouton « Voir tous les points » sous la boussole : recadre la carte sur l’ensemble des points.',
+    'Zones de remplacement (UAI du type 037002ZK) : une bulle par zone, placée dans son département, près du bord indiqué par son nom (ouest, nord…).',
+    'Contours des départements (case dans la légende).'
+  ] },
   { version: '1.2.0', date: 'novembre 2026', points: [
     'Groupes : créer des groupes (nom, couleur, description) et les voir en couleur sur la carte, en camembert pour les personnes de plusieurs groupes.',
     'Ajouter des membres depuis la fiche, depuis la sélection, ou en collant une liste de mails ou de noms (ou un CSV) : le widget retrouve les personnes et demande de valider les doutes.',
@@ -431,6 +445,7 @@ const IC = {
   'file-up': '<path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7Z"/><path d="M14 2v4a2 2 0 0 0 2 2h4"/><path d="M12 12v6"/><path d="m15 15-3-3-3 3"/>',
   trash: '<path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>',
   check: '<path d="M20 6 9 17l-5-5"/>',
+  fullscreen: '<path d="M3 7V5a2 2 0 0 1 2-2h2"/><path d="M17 3h2a2 2 0 0 1 2 2v2"/><path d="M21 17v2a2 2 0 0 1-2 2h-2"/><path d="M7 21H5a2 2 0 0 1-2-2v-2"/><rect width="10" height="8" x="7" y="8" rx="1"/>',
   sort: '<path d="m21 16-4 4-4-4"/><path d="M17 20V4"/><path d="m3 8 4-4 4 4"/><path d="M7 4v16"/>'
 };
 const ic = (nom, style = '') => `<svg class="ic" viewBox="0 0 24 24" aria-hidden="true"${style ? ` style="${style}"` : ''}>${IC[nom] || ''}</svg>`;
@@ -452,6 +467,7 @@ function reglagesParDefaut() {
     couleur: { source: 'categorie', col: null, palette: 'lisible', valeurs: {}, mode: 'camembert' },
     bulles: { survol: { commune: true, nombre: true, type: false }, modele: '', colonnes: null, mailParPersonne: true, lienGrist: true, tri: null },
     fond: { actif: false, academie: null, types: ['CLG', 'LYC', 'EREA'], secteurs: ['Public', 'Privé'] },
+    contours: true,
     regrouper: true
   };
 }
@@ -665,7 +681,7 @@ function infoEtab(uai, recs) {
     type: g ? typeEtab(g.nature) : '',
     typeLib: g ? (TYPES[typeEtab(g.nature)] === 'Autre' ? (g.natureLib || 'Autre') : TYPES[typeEtab(g.nature)]) : (cT && texte(r0[cT])) || '',
     secteur: g ? secteurDe(g.secteur) : '',
-    dep: (g && g.dep) || (cD && texte(r0[cD])) || (/^\d{3}/.test(uai) ? `Département ${uai.slice(0, 3)}` : ''),
+    dep: (g && g.dep) || (cD && texte(r0[cD])) || (/^\d{3}/.test(uai) ? nomDep(codeDep(uai)) : ''),
     academie: (g && g.academie) || '',
     adresse: g ? [g.adresse, [g.cp, g.commune].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '',
     open: !!g
@@ -680,6 +696,10 @@ function coordonnees(uai, recs) {
   const g = geo[uai] && geo[uai].d;
   return g && g.lat != null ? { lat: g.lat, lon: g.lon } : null;
 }
+function partsDe(ps) {
+  const cpt = new Map(); for (const p of ps) for (const k of p.cats) if (!masquees.has(k)) cpt.set(k, (cpt.get(k) || 0) + 1);
+  return [...cpt.entries()].map(([cle, n]) => ({ cle, n, c: couleurCat(cle) })).sort((a, b) => b.n - a.n);
+}
 function recalculer() {
   colonnesTable = colonnesDe(lignes);
   const d = deviner(lignes, colonnesTable); devinees = d.res; raisons = d.pourquoi;
@@ -692,22 +712,38 @@ function recalculer() {
   // regroupement par UAI (personnes filtrées et non masquées)
   visibles = personnes.filter(p => p.uai && passeFiltre(p) && p.cats.some(k => !masquees.has(k)));
   sansUai = personnes.filter(p => !p.uai);
-  const groupes = new Map();
-  for (const p of visibles) { if (!groupes.has(p.uai)) groupes.set(p.uai, []); groupes.get(p.uai).push(p); }
+  const parUaiP = new Map();
+  for (const p of visibles) { if (!parUaiP.has(p.uai)) parUaiP.set(p.uai, []); parUaiP.get(p.uai).push(p); }
   etabs = []; introuvables = []; parUai = new Map();
   const triCol = reglages.bulles.tri && colonnesTable.includes(reglages.bulles.tri) ? reglages.bulles.tri : col('Nom');
-  for (const [uai, ps] of groupes) {
+  const zrs = [];
+  for (const [uai, ps] of parUaiP) {
     if (triCol) ps.sort((a, b) => texte(a.rec[triCol]).localeCompare(texte(b.rec[triCol]), 'fr'));
+    if (estZR(uai)) { zrs.push([uai, ps]); continue; }
     const xy = coordonnees(uai, ps.map(p => p.rec));
     const e = { uai, pers: ps, n: ps.length, ...infoEtab(uai, ps.map(p => p.rec)), lat: xy && xy.lat, lon: xy && xy.lon };
-    const cpt = new Map(); for (const p of ps) for (const k of p.cats) if (!masquees.has(k)) cpt.set(k, (cpt.get(k) || 0) + 1);
-    e.parts = [...cpt.entries()].map(([cle, n]) => ({ cle, n, c: couleurCat(cle) })).sort((a, b) => b.n - a.n);
+    e.parts = partsDe(ps);
     if (depart && xy) e.dist = distanceKm(depart, e);
     if (xy) { etabs.push(e); parUai.set(uai, e); }
     else if (!RE_UAI.test(uai) || (geo[uai] && geo[uai].d === null)) introuvables.push(e);
   }
+  // zones de remplacement : une bulle par ZR, près du bord du département
+  const parDep = new Map();
+  for (const z of zrs) { const d = codeDep(z[0]); if (!parDep.has(d)) parDep.set(d, []); parDep.get(d).push(z); }
+  for (const [d, liste] of parDep) {
+    liste.sort((a, b) => a[0].localeCompare(b[0]));
+    liste.forEach(([uai, ps], i) => {
+      const cE = col('Etablissement'), nomT = cE ? texte(ps[0].rec[cE]) : '';
+      const xy = positionZR(d, nomT, i, liste.length);
+      const e = { uai, pers: ps, n: ps.length, zr: true, nom: nomT || `Zone de remplacement ${nomDep(d)}`, court: libelleZR(d, nomT, liste.length > 1 ? i : -1),
+        commune: nomDep(d), typeLib: 'Zone de remplacement', secteur: '', dep: nomDep(d), academie: '', adresse: '', lat: xy && xy.lat, lon: xy && xy.lon, parts: partsDe(ps) };
+      if (depart && xy) e.dist = distanceKm(depart, e);
+      if (xy) { etabs.push(e); parUai.set(uai, e); }
+    });
+  }
+  if (zrs.length || reglages.contours !== false) chargerDepartements();
   // UAI introuvables : aussi ceux des personnes masquées ou filtrées, pour l’aide
-  for (const p of personnes) if (p.uai && !groupes.has(p.uai) && !coordonnees(p.uai, [p.rec]) && (!RE_UAI.test(p.uai) || (geo[p.uai] && geo[p.uai].d === null)) && !introuvables.some(e => e.uai === p.uai)) {
+  for (const p of personnes) if (p.uai && !estZR(p.uai) && !parUaiP.has(p.uai) && !coordonnees(p.uai, [p.rec]) && (!RE_UAI.test(p.uai) || (geo[p.uai] && geo[p.uai].d === null)) && !introuvables.some(e => e.uai === p.uai)) {
     introuvables.push({ uai: p.uai, pers: personnes.filter(q => q.uai === p.uai), nom: '' });
   }
   visibles = etabs.flatMap(e => e.pers);      // « affichées » = placées sur la carte
@@ -834,6 +870,101 @@ async function chargerFond() {
   majFond();
 }
 
+// ------------------------------------------------------------------------------------------------ zones de remplacement, départements
+// Un UAI de zone de remplacement : 6 chiffres, Z, une lettre (037002ZK). Pas de position en open data : la ZR est
+// montrée par une bulle placée dans son département, près du bord indiqué par son nom (OUEST, NORD…).
+// Contours : departements.geojson, publié avec le widget (france-geojson d’après Admin Express © IGN, Licence ouverte).
+const RE_ZR = /^\d{6}Z[A-Z]$/;
+const estZR = u => RE_ZR.test(u);
+const codeDep = u => { const c = String(u).slice(0, 3); return /^0\d\d$/.test(c) ? c.slice(1) : c; };
+let departements = null, chargementDeps = null;
+const nomDep = c => (departements && departements.get(c) && departements.get(c).nom) || `Département ${c}`;
+function chargerDepartements() {
+  if (departements || chargementDeps) return chargementDeps;
+  chargementDeps = lireJson(new URL('departements.geojson', location.href).href).then(j => {
+    departements = new Map();
+    for (const f of j.features || []) {
+      const anneaux = f.geometry.coordinates.map(p => p[0]);
+      let x1 = 180, y1 = 90, x2 = -180, y2 = -90;
+      for (const r of anneaux) for (const [x, y] of r) { x1 = Math.min(x1, x); x2 = Math.max(x2, x); y1 = Math.min(y1, y); y2 = Math.max(y2, y); }
+      departements.set(f.properties.code, { code: f.properties.code, nom: f.properties.nom, f, anneaux, bbox: [x1, y1, x2, y2] });
+    }
+    recalculer();
+  }).catch(() => { departements = new Map(); });
+  return chargementDeps;
+}
+function dansAnneau([x, y], r) {
+  let dedans = false;
+  for (let i = 0, j = r.length - 1; i < r.length; j = i++) {
+    const [xi, yi] = r[i], [xj, yj] = r[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) dedans = !dedans;
+  }
+  return dedans;
+}
+const MOTS_ZR = { OUEST: ['x', .12], EST: ['x', .88], NORD: ['y', .88], SUD: ['y', .12], CENTRE: ['c', .5] };
+function motsZR(code, nomZR) {
+  const ote = new Set(sansAccents(nomDep(code)).toUpperCase().split(/[^A-Z]+/).filter(Boolean));
+  return sansAccents(nomZR).toUpperCase().split(/[^A-Z]+/).filter(w => w && w !== 'ZR' && w !== 'ZONE' && w !== 'REMPLACEMENT' && w !== 'DE' && !ote.has(w));
+}
+function libelleZR(code, nomZR, i) {
+  const reste = motsZR(code, nomZR).map(w => w[0] + w.slice(1).toLowerCase()).join(' ');
+  return `ZR ${code}${reste ? ' ' + reste.slice(0, 18) : i >= 0 ? ' n° ' + (i + 1) : ''}`;
+}
+function positionZR(code, nomZR, i, n) {
+  const d = departements && departements.get(code);
+  if (!d) {   // contours pas encore là (ou introuvables) : sous les établissements du département
+    const autres = etabs.filter(e => !e.zr && e.uai.startsWith(code.padStart(3, '0')));
+    if (!autres.length) return null;
+    const la = Math.min(...autres.map(e => e.lat)), lo = autres.reduce((s, e) => s + e.lon, 0) / autres.length;
+    return { lat: la - .08, lon: lo + (i - (n - 1) / 2) * .25 };
+  }
+  let fx = null, fy = null;
+  for (const w of motsZR(code, nomZR)) { const h = MOTS_ZR[w]; if (!h) continue; if (h[0] === 'x') fx = h[1]; else if (h[0] === 'y') fy = h[1]; else { fx = fx ?? .5; fy = fy ?? .5; } }
+  if (fx == null && fy == null) { fx = (i + 1) / (n + 1); fy = .1; }     // sans indication : le long du bord sud
+  fx = fx ?? .5; fy = fy ?? .5;
+  const [x1, y1, x2, y2] = d.bbox, cx = (x1 + x2) / 2, cy = (y1 + y2) / 2;
+  const p = [x1 + fx * (x2 - x1), y1 + fy * (y2 - y1)];
+  const dedans = q => d.anneaux.some(r => dansAnneau(q, r));
+  for (let t = 0; t <= 1.001; t += .05) {
+    const q = [p[0] + (cx - p[0]) * t, p[1] + (cy - p[1]) * t];
+    if (dedans(q)) { const t2 = Math.min(1, t + .15), q2 = [p[0] + (cx - p[0]) * t2, p[1] + (cy - p[1]) * t2]; const r = dedans(q2) ? q2 : q; return { lon: r[0], lat: r[1] }; }
+  }
+  return { lon: cx, lat: cy };
+}
+function geojsonDeps() {
+  if (!departements || reglages.contours === false) return vide();
+  const codes = new Set(personnes.filter(p => /^\d{3}/.test(p.uai)).map(p => codeDep(p.uai)));
+  return { type: 'FeatureCollection', features: [...codes].map(c => departements.get(c)).filter(Boolean).map(d => d.f) };
+}
+let marqueursZR = [];
+function majZR() {
+  marqueursZR.forEach(m => m.remove()); marqueursZR = [];
+  if (!map) return;
+  for (const e of etabs.filter(x => x.zr)) {
+    const ancre = document.createElement('div'); ancre.className = 'zr-ancre';
+    const b = document.createElement('button'); b.type = 'button';
+    b.className = 'zr' + (e.uai === ficheUai ? ' actif' : '') + (e.pers.some(p => selection.has(p.id)) ? ' choisi' : '');
+    b.dataset.uai = e.uai;
+    b.innerHTML = `<span class="pastille" style="background:${esc(fondPoint(e.parts))}"></span><span>${esc(e.court)}</span><span class="zr-n">${e.n}</span>`;
+    b.setAttribute('aria-label', `${e.nom} : ${pluriel(e.n, 'personne', 'personnes')} en zone de remplacement. Ouvrir la fiche.`);
+    b.addEventListener('mouseenter', () => montrerSurvol(e)); b.addEventListener('mouseleave', cacherSurvol);
+    b.addEventListener('focus', () => montrerSurvol(e)); b.addEventListener('blur', cacherSurvol);
+    b.addEventListener('click', ev => { ev.stopPropagation(); ouvrirFiche(e.uai); });
+    ancre.appendChild(b);
+    marqueursZR.push(new maplibregl.Marker({ element: ancre }).setLngLat([e.lon, e.lat]).addTo(map));
+  }
+}
+// bouton « voir tous les points », dans le groupe des boutons de zoom
+class CtrlRecadrer {
+  onAdd() {
+    const d = document.createElement('div'); d.className = 'maplibregl-ctrl maplibregl-ctrl-group';
+    d.innerHTML = `<button type="button" class="ctrl-recadrer" aria-label="Voir tous les points" title="Voir tous les points">${ic('fullscreen', 'width:18px;height:18px')}</button>`;
+    d.firstChild.addEventListener('click', () => { if (etabs.length) cadrer(etabs); });
+    return (this.el = d);
+  }
+  onRemove() { if (this.el) this.el.remove(); }
+}
+
 // ------------------------------------------------------------------------------------------------ carte
 function themeEffectif() { return theme === 'auto' ? (matchMedia('(prefers-color-scheme: dark)').matches ? 'sombre' : 'clair') : theme; }
 let themeApplique = null;
@@ -854,6 +985,7 @@ function initCarte() {
   themeApplique = themeEffectif();
   // boussole : un clic remet le nord en haut et la carte à plat (après rotation ou inclinaison à deux doigts)
   map.addControl(new maplibregl.NavigationControl({ showCompass: true, visualizePitch: true }), 'bottom-right');
+  map.addControl(new CtrlRecadrer(), 'bottom-right');
   map.on('styledata', ajouterCouches);
   map.on('load', ajouterCouches);
   map.on('render', planifierMarqueurs);
@@ -870,7 +1002,7 @@ function initCarte() {
 }
 const vide = () => ({ type: 'FeatureCollection', features: [] });
 function geojsonEtabs() {
-  return { type: 'FeatureCollection', features: etabs.map(e => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lon, e.lat] }, properties: { uai: e.uai, n: e.n } })) };
+  return { type: 'FeatureCollection', features: etabs.filter(e => !e.zr).map(e => ({ type: 'Feature', geometry: { type: 'Point', coordinates: [e.lon, e.lat] }, properties: { uai: e.uai, n: e.n } })) };
 }
 function geojsonFond() {
   if (!reglages.fond.actif || !fondDonnees) return vide();
@@ -897,6 +1029,8 @@ function ajouterCouches() {
   try {
     if (map.getSource('etabs')) return;
     const sombre = themeEffectif() === 'sombre';
+    map.addSource('deps', { type: 'geojson', data: geojsonDeps() });
+    map.addLayer({ id: 'deps', type: 'line', source: 'deps', paint: { 'line-color': sombre ? '#94a3b8' : '#64748b', 'line-width': 1.3, 'line-opacity': .55 } });
     map.addSource('fond', { type: 'geojson', data: geojsonFond() });
     map.addLayer({ id: 'fond', type: 'circle', source: 'fond', paint: { 'circle-radius': ['interpolate', ['linear'], ['zoom'], 6, 1.8, 12, 4.5], 'circle-color': sombre ? '#6b7280' : '#b3aea6', 'circle-opacity': .85 } });
     map.addSource('rayons', { type: 'geojson', data: geojsonRayons() });
@@ -910,7 +1044,8 @@ function majCarte() {
   if (!map) return;
   const s = map.getSource && map.getSource('etabs');
   if (s) { s.setData(geojsonEtabs()); viderMarqueurs(); planifierMarqueurs(); }
-  majFond(); majDepart();
+  majFond(); majDepart(); majZR();
+  const sd = map.getSource && map.getSource('deps'); if (sd) sd.setData(geojsonDeps());
   if (!cadreFait && etabs.length) { cadreFait = true; cadrer(etabs, false); }
 }
 function majFond() { const s = map && map.getSource && map.getSource('fond'); if (s) s.setData(geojsonFond()); }
@@ -1074,7 +1209,7 @@ function selectionnerZone(x1, y1, x2, y2) {
 }
 function apresSelection() {
   rendreBarreSelection();
-  viderMarqueurs(); planifierMarqueurs();
+  viderMarqueurs(); planifierMarqueurs(); majZR();
   if (ficheUai) rendreFiche();
   if (!$('tableau').hidden) rendreTableau();
 }
@@ -1104,6 +1239,7 @@ function rendreLegende() {
       ${categories.length > 1 ? '<p class="aide-texte">Cliquer une ligne pour la masquer ou la montrer.</p>' : ''}
       <hr class="sep">
       <label class="case"><input type="checkbox" id="c-regrouper" ${reglages.regrouper ? 'checked' : ''}>Regrouper les points proches</label>
+      <label class="case"><input type="checkbox" id="c-contours" ${reglages.contours !== false ? 'checked' : ''}>Contours des départements</label>
       <label class="case"><input type="checkbox" id="c-fond" ${f.actif ? 'checked' : ''}>Fond d’établissements</label>
       ${f.actif ? `<div class="sous-fond"><div class="puces" style="padding-left:0">${puces}</div>
         <label class="champ"><span class="sr">Académie</span><select id="c-academie" aria-label="Académie du fond">${[...new Set([f.academie || academieProbable(), ...(listeAcademies || ACADEMIES)])].map(a => `<option ${a === (f.academie || academieProbable()) ? 'selected' : ''}>${esc(a)}</option>`).join('')}</select></label></div>` : ''}
@@ -1189,7 +1325,7 @@ function htmlFiche(e, apercu = false) {
       ${apercu ? '' : `<button class="fermer" id="fiche-fermer" aria-label="Fermer la fiche">${ic('x')}</button>`}</div>
     <div class="liens">
       ${site ? `<a class="btn petit" href="${esc(site)}" target="_blank" rel="noopener">${ic('external')}Site</a>` : ''}
-      <a class="btn petit" href="${esc(lienItineraire(e))}" target="_blank" rel="noopener">${ic('route')}Itinéraire</a>
+      ${e.zr ? '<span class="aide-texte">Zone de remplacement : la bulle est placée dans le département, pas à une adresse.</span>' : `<a class="btn petit" href="${esc(lienItineraire(e))}" target="_blank" rel="noopener">${ic('route')}Itinéraire</a>`}
       ${me ? `<a class="btn petit" href="mailto:${esc(me)}" target="_blank" rel="noopener" title="${esc(me)}">${ic('mail')}Écrire à l’établissement</a>` : ''}
     </div>
     <div class="pers-tete">
@@ -1207,7 +1343,7 @@ function ouvrirFiche(uai, idTrouve = null) {
   const e = parUai.get(uai); if (!e) return;
   ficheUai = uai; ficheTrouve = idTrouve;
   rendreFiche();
-  viderMarqueurs(); planifierMarqueurs();
+  viderMarqueurs(); planifierMarqueurs(); majZR();
   chargerAnnuaire([uai]).then(ch => { if (ch && ficheUai === uai) rendreFiche(); });
 }
 function rendreFiche() {
@@ -1216,7 +1352,7 @@ function rendreFiche() {
   f.innerHTML = htmlFiche(e); f.hidden = false; document.body.classList.add('fiche-ouverte');
   if (ficheTrouve) { const li = f.querySelector(`li[data-id="${ficheTrouve}"]`); if (li) li.scrollIntoView({ block: 'nearest' }); }
 }
-function fermerFiche() { ficheUai = null; ficheTrouve = null; $('fiche').hidden = true; document.body.classList.remove('fiche-ouverte'); viderMarqueurs(); planifierMarqueurs(); }
+function fermerFiche() { ficheUai = null; ficheTrouve = null; $('fiche').hidden = true; document.body.classList.remove('fiche-ouverte'); viderMarqueurs(); planifierMarqueurs(); majZR(); }
 function voirDansGrist(id) {
   if (id < 0) return toast(`Membre hors table : il se modifie dans la table ${T_MEMBRES}.`);
   if (!DANS_GRIST) return toast('Dans Grist, ce bouton sélectionne la ligne de la personne dans la table.');
@@ -1977,6 +2113,16 @@ function exporterPng() {
     g.strokeStyle = '#fff'; g.lineWidth = 2 * k; g.beginPath(); g.arc(x, y, r, 0, 2 * Math.PI); g.stroke();
     if (e.n > 1) { g.fillStyle = '#1f2937'; g.beginPath(); g.arc(x + r, y - r, 9 * k, 0, 2 * Math.PI); g.fill(); g.fillStyle = '#fff'; g.font = `700 ${11 * k}px Inter, system-ui, sans-serif`; g.textAlign = 'center'; g.fillText(String(e.n), x + r, y - r + 4 * k); g.textAlign = 'left'; }
   }
+  for (const m of marqueursZR) {
+    const b = m.getElement().querySelector('.zr'), e = b && parUai.get(b.dataset.uai); if (!e) continue;
+    const q = map.project(m.getLngLat()), x = q.x * k, y = q.y * k;
+    g.font = `600 ${12 * k}px Inter, system-ui, sans-serif`;
+    const txt = `${e.court} · ${e.n}`, w = g.measureText(txt).width + 30 * k, h = 22 * k;
+    g.fillStyle = '#fff'; g.strokeStyle = '#5b6370'; g.lineWidth = 1.5 * k; g.setLineDash([4 * k, 3 * k]);
+    g.beginPath(); g.roundRect ? g.roundRect(x - w / 2, y - h / 2, w, h, h / 2) : g.rect(x - w / 2, y - h / 2, w, h); g.fill(); g.stroke(); g.setLineDash([]);
+    g.fillStyle = e.parts[0] ? e.parts[0].c : SANS; g.beginPath(); g.arc(x - w / 2 + 12 * k, y, 6 * k, 0, 2 * Math.PI); g.fill();
+    g.fillStyle = '#1f2937'; g.fillText(txt, x - w / 2 + 22 * k, y + 4 * k);
+  }
   dessinerLegende(g, k);
   g.fillStyle = 'rgba(31,41,55,.8)'; g.font = `${10 * k}px Inter, system-ui, sans-serif`; g.fillText('© OpenFreeMap © OpenStreetMap — Carto-profs', 10 * k, cv.height - 8 * k);
   cv.toBlob(b => { if (b) telecharger(`carto-profs-${date()}.png`, b, 'image/png'); else toast('Image impossible à produire.'); });
@@ -2272,6 +2418,7 @@ $('legende').addEventListener('click', ev => {
 });
 $('legende').addEventListener('change', ev => {
   if (ev.target.id === 'c-regrouper') { reglages.regrouper = ev.target.checked; sauver(); rebatirSourceEtabs(); }
+  if (ev.target.id === 'c-contours') { reglages.contours = ev.target.checked; sauver(); chargerDepartements(); const sd = map && map.getSource('deps'); if (sd) sd.setData(geojsonDeps()); return; }
   if (ev.target.id === 'c-fond') { reglages.fond.actif = ev.target.checked; sauver(); rendreLegende(); chargerFond(); }
   if (ev.target.id === 'c-academie') { reglages.fond.academie = ev.target.value; sauver(); chargerFond(); }
 });
@@ -2518,12 +2665,13 @@ function initGrist() {
 }
 appliquerTheme();
 initCarte();
+chargerDepartements();
 rendreLegende(); rendreStatut();
 initGrist();
 
 // points d’accès pour les tests automatiques
 window.cartoProfs = { VERSION, rendreModele, lienMailto, lots, deviner, typeEtab, domaineAcademie, analyserColonne, distanceKm,
-  etat: () => ({ personnes, visibles, etabs, categories, introuvables, sansUai, selection: [...selection], reglages, geo, filtre, depart, devinees }),
+  etat: () => ({ departements: departements ? Object.fromEntries([...departements].map(([c, d]) => [c, { nom: d.nom, bbox: d.bbox }])) : null, personnes, visibles, etabs, categories, introuvables, sansUai, selection: [...selection], reglages, geo, filtre, depart, devinees }),
   destinataires, csvEtabs, ouvrirFiche, selectionnerZone };
 </script>
 </body>

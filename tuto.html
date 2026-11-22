@@ -173,7 +173,14 @@ summary { cursor: pointer; font-weight: 600; }
     <figcaption>La fiche : liens utiles, personnes (format réglable), case pour la sélection, écrire, voir la ligne dans Grist.</figcaption>
   </figure>
   <p>Le fond de carte clair ou sombre suit le réglage de votre ordinateur ; le bouton de thème le change.</p>
-  <p>À deux doigts (ou clic droit maintenu), on peut tourner et incliner la carte. La <b>boussole</b> en bas à droite remet le nord en haut et la carte à plat.</p>
+  <p>À deux doigts (ou clic droit maintenu), on peut tourner et incliner la carte. La <b>boussole</b> en bas à droite remet le nord en haut et la carte à plat ; le bouton juste dessous (<b>Voir tous les points</b>) recadre la carte sur l’ensemble des points.</p>
+  <h3>Zones de remplacement</h3>
+  <p>Les titulaires sur zone de remplacement ont un UAI particulier : 6 chiffres, puis <code>Z</code> et une lettre
+  (par exemple <code>037002ZK</code>). Ces zones n’ont pas d’adresse : le widget les montre par une <b>bulle en
+  pointillés</b> (« ZR 37 Ouest · 5 »), placée dans le département, près du bord indiqué par le nom de la zone
+  (ouest, est, nord, sud, centre) lu dans la colonne de l’établissement (par exemple « ZR INDRE ET LOIRE OUEST »).
+  Un clic ouvre la liste des personnes, comme pour un établissement.</p>
+  <p>Les <b>contours des départements</b> s’affichent pour les départements présents dans la table (case dans la légende).</p>
 </section>
 
 <section id="couleurs">
@@ -323,7 +330,7 @@ summary { cursor: pointer; font-weight: 600; }
   <details><summary>Mes réglages ne sont pas gardés</summary><p>Vous n’avez que le droit de lecture sur le document : demandez à son propriétaire de faire les réglages, ou de vous donner le droit de modifier.</p></details>
 </section>
 <p style="color:var(--doux);font-size:13px">Carto-profs — widget libre (licence EUPL 1.2) du groupe <a href="https://forge.apps.education.fr/widget">widget</a> de la Forge des communs numériques éducatifs.
-Fond de carte © OpenFreeMap, © contributeurs OpenStreetMap ; positions et annuaire : data.education.gouv.fr (Licence Ouverte) ; icônes Lucide (ISC).</p>
+Fond de carte © OpenFreeMap, © contributeurs OpenStreetMap ; contours des départements : france-geojson d’après Admin Express © IGN (Licence ouverte) ; positions et annuaire : data.education.gouv.fr (Licence Ouverte) ; icônes Lucide (ISC).</p>
 </main>
 </div>
 </body>

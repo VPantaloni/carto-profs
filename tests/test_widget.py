@@ -457,7 +457,7 @@ def test_menu_aide_et_presentation(page_prete):
     page.locator("#b-aide").click()
     expect(page.get_by_role("menuitem", name="Visite guidée")).to_be_visible()
     page.get_by_role("menuitem", name="Quoi de neuf ?").click()
-    expect(page.locator("#modale")).to_contain_text("Version 1.2.0")
+    expect(page.locator("#modale")).to_contain_text("Version 1.3.0")
     page.keyboard.press("Escape")
     page.locator("#b-presentation").click()
     expect(page.locator("#barre")).to_be_hidden()
@@ -639,3 +639,53 @@ def test_groupes_csv_import_entetes_et_suppression(page_groupes):
     expect(page.locator("[data-g-suppr]").first).to_contain_text("Confirmer")
     page.locator("[data-g-suppr]").first.click()
     page.wait_for_function("window.__grist.tables.Carto_groupes.lignes.length === 0 && window.__grist.tables.Carto_membres.lignes.length === 0")
+
+
+# ---------------------------------------------------------------------------------------------------- zones de remplacement
+ZR = [
+    {"id": 20, "Nom": "MOREL", "Prenom": "Ana", "mail_ouvert": "a.morel@exemple.invalid", "Grade": "Certifié", "Rne": "037002ZK", "EtabNom": "ZR INDRE ET LOIRE OUEST", "nbre_heure": 18},
+    {"id": 21, "Nom": "SIMON", "Prenom": "Luc", "mail_ouvert": "l.simon@exemple.invalid", "Grade": "Contractuel", "Rne": "037002ZK", "EtabNom": "ZR INDRE ET LOIRE OUEST", "nbre_heure": 18},
+    {"id": 22, "Nom": "AUBRY", "Prenom": "Nora", "mail_ouvert": "n.aubry@exemple.invalid", "Grade": "Certifié", "Rne": "037003ZB", "EtabNom": "ZR INDRE ET LOIRE EST", "nbre_heure": 18},
+    {"id": 23, "Nom": "COLIN", "Prenom": "Tom", "mail_ouvert": "t.colin@exemple.invalid", "Grade": "Certifié", "Rne": "041003ZB", "EtabNom": "ZR LOIR ET CHER", "nbre_heure": 18},
+]
+
+
+def test_zones_de_remplacement(navigateur, serveur):
+    page, appels, erreurs = preparer(navigateur, serveur)
+    page.evaluate("localStorage.setItem('carto-profs:visite', JSON.stringify({n: 9, finie: true}))")
+    envoyer(page, lignes=[{**l, "EtabNom": ""} for l in LIGNES] + ZR, options=CONFIGURE)
+    page.wait_for_function("document.querySelectorAll('.zr').length === 3")
+    # ni introuvables, ni demandées à l'open data
+    assert all("ZK" not in u and "ZB" not in u for paquet in appels.geo for u in paquet)
+    assert not any(e["uai"].endswith(("ZK", "ZB")) for e in etat(page, "introuvables"))
+    expect(page.locator('.zr[data-uai="037002ZK"]')).to_contain_text("ZR 37 Ouest")
+    expect(page.locator('.zr[data-uai="037002ZK"] .zr-n')).to_have_text("2")
+    expect(page.locator('.zr[data-uai="037003ZB"]')).to_contain_text("ZR 37 Est")
+    expect(page.locator('.zr[data-uai="041003ZB"]')).to_contain_text("ZR 41")
+    # placées dans leur département : ouest à l'ouest, est à l'est
+    e = {x["uai"]: x for x in etat(page, "etabs")}
+    deps = etat(page, "departements")
+    x1, y1, x2, y2 = deps["37"]["bbox"]
+    assert deps["37"]["nom"] == "Indre-et-Loire"
+    for u in ("037002ZK", "037003ZB"):
+        assert x1 < e[u]["lon"] < x2 and y1 < e[u]["lat"] < y2
+    assert e["037002ZK"]["lon"] < (x1 + x2) / 2 < e["037003ZB"]["lon"]
+    # fiche : personnes de la ZR, pas d'itinéraire
+    page.locator('.zr[data-uai="037002ZK"]').click()
+    fiche = page.locator("#fiche")
+    expect(fiche).to_contain_text("ZR INDRE ET LOIRE OUEST")
+    expect(fiche).to_contain_text("Zone de remplacement")
+    expect(fiche.locator("li")).to_have_count(2)
+    expect(fiche.get_by_role("link", name="Itinéraire")).to_have_count(0)
+    # contours des départements présents (45, 37, 18, 41), et la case les retire
+    codes = page.evaluate("window.__carte.carte.getSource('deps').data.features.map(f => f.properties.code).sort()")
+    assert codes == ["18", "37", "41", "45"]
+    page.locator("#c-contours").uncheck()
+    page.wait_for_function("window.__carte.carte.getSource('deps').data.features.length === 0")
+    # recadrer sur tous les points (ZR comprises)
+    n = page.evaluate("window.__carte.appels.length")
+    page.get_by_role("button", name="Voir tous les points").dispatch_event("click")   # le faux MapLibre ne range pas les contrôles
+    dernier = page.evaluate(f"window.__carte.appels.slice({n})")
+    assert ["fitBounds", 6] in dernier, dernier     # 3 établissements + 3 ZR
+    assert erreurs == []
+    page.context.close()

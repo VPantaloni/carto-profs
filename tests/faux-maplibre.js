@@ -24,7 +24,7 @@
       journal.carte = this; journal.styles.push(o.style);
       setTimeout(() => { this._emettre('styledata'); this._emettre('load'); this._emettre('render'); }, 10);
     }
-    addControl() { return this; }
+    addControl(c) { if (c && c.onAdd) this.conteneur.appendChild(c.onAdd(this)); return this; }
     addSource(id, def) { if (this.sources[id]) throw new Error('source existe : ' + id); this.sources[id] = new Source(this, def); journal.sources[id] = def; setTimeout(() => this._emettre('render'), 0); }
     getSource(id) { return this.sources[id]; }
     removeSource(id) { delete this.sources[id]; }
@@ -46,6 +46,7 @@
     flyTo(o) { journal.appels.push(['flyTo', o.center]); this.centre = o.center; this._emettre('render'); }
     easeTo(o) { journal.appels.push(['easeTo', o.center]); }
     resize() {}
+    getBearing() { return 0; }
     setStyle(url) {
       journal.styles.push(url); this.sources = {}; this.couches = {};
       setTimeout(() => { this._emettre('styledata'); this._emettre('render'); }, 10);

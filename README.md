@@ -93,6 +93,9 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
   (mails, « NOM Prénom », tableau avec titres) avec rapprochement automatique et validation des doutes (homonymes, noms
   approchés) ; membres hors table placés par leur UAI ; coloriage par groupes (camembert si plusieurs, « Hors groupe »
   en gris, masquable) ; CSV par groupe.
+- **Zones de remplacement** (UAI `037002ZK` : 6 chiffres + `Z` + lettre) : une bulle par zone dans son département,
+  près du bord donné par son nom (OUEST, EST, NORD, SUD, CENTRE, lu dans la colonne établissement) ; **contours des
+  départements** ; bouton **Voir tous les points** sous la boussole.
 - **Tableau de bord** (département, type, catégorie), **liste** accessible au clavier, exports **PNG**, **CSV**,
   impression **A4**, **mode présentation**.
 - UAI introuvables et lignes sans UAI signalés avec une aide ; démonstration hors de Grist.
@@ -102,6 +105,7 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
 <summary>Développement et tests</summary>
 
 Un seul fichier `index.html` (HTML + CSS + JS, module ES), sans étape de construction. Icônes Lucide intégrées.
+`departements.geojson` (300 Ko) : contours simplifiés des départements, publiés à côté du widget et lus par lui.
 
 Tests sans affichage (Playwright + Chromium) avec une fausse API Grist, un faux MapLibre et de fausses réponses
 open data, données inventées :
@@ -122,14 +126,16 @@ données fictives (UAI inventés, avec leurs coordonnées).
   `.github/workflows/forge.yml` recopie le dépôt vers `forge.apps.education.fr/widget/carto-profs`.
 - Le jeton d’accès de la Forge va dans **Settings → Secrets and variables → Actions → `FORGE_TOKEN`** du dépôt GitHub
   (jeton de projet ou personnel, portée `write_repository`). Jamais dans le code.
-- Sur la Forge, `.gitlab-ci.yml` publie `index.html`, `tuto.html` et `exemple/` avec GitLab Pages.
+- Sur la Forge, `.gitlab-ci.yml` publie `index.html`, `tuto.html`, `departements.geojson` et `exemple/` avec GitLab Pages.
 - `.github/workflows/tests.yml` lance les tests à chaque poussée.
 </details>
 
 <details>
 <summary>Crédits et licence</summary>
 
-Licence **EUPL 1.2** (voir `LICENSE`). Fond de carte © OpenFreeMap, © contributeurs OpenStreetMap ; données
+Licence **EUPL 1.2** (voir `LICENSE`). Fond de carte © OpenFreeMap, © contributeurs OpenStreetMap ;
+contours des départements : [france-geojson](https://github.com/gregoiredavid/france-geojson) (G. David) d’après
+Admin Express © IGN, Licence ouverte, simplifiés ; données
 © ministère de l’Éducation nationale, Licence Ouverte (data.education.gouv.fr) ; géocodage IGN Géoplateforme ;
 icônes [Lucide](https://lucide.dev) (ISC) ; [MapLibre GL JS](https://maplibre.org) (BSD-3-Clause).
 </details>
