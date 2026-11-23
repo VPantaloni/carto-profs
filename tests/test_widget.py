@@ -72,6 +72,10 @@ def preparer(navigateur, serveur, taille=(1280, 800), grist=True, opendata_ko=Fa
             return route.fulfill(status=503, body="indisponible")
         if "fr-en-annuaire-education" in url:
             uais = re.findall(r'"([0-9A-Z]{8})"', q.get("where", [""])[0]); appels.annu.append(uais)
+            if " OR " in q.get("where", [""])[0] or not q.get("where", [""])[0].startswith("identifiant"):   # recherche plein texte (secours)
+                res = [{"identifiant_de_l_etablissement": "0450080T", "nom_etablissement": "Rectorat (fictif)", "type_etablissement": "Service Administratif",
+                        "nom_commune": "Orléans", "latitude": 47.905, "longitude": 1.915, "libelle_academie": "Orléans-Tours"}] if "0450080T" in uais else []
+                return route.fulfill(json={"results": res})
             res = [{"identifiant_de_l_etablissement": "0459901A", "mail": "secretariat@lycee-val.invalid", "web": "lycee-val.invalid", "telephone": "02 00 00 00 00"}] if "0459901A" in uais else []
             return route.fulfill(json={"total_count": len(res), "results": res})
         if "/exports/json" in url:
@@ -83,6 +87,16 @@ def preparer(navigateur, serveur, taille=(1280, 800), grist=True, opendata_ko=Fa
         res = [{"numero_uai": u, **OPEN[u]} for u in uais if u in OPEN]
         return route.fulfill(json={"total_count": len(res), "results": res})
     page.route("https://data.education.gouv.fr/**", opendata)
+    def esr(route):
+        url = route.request.url; w = urllib.parse.parse_qs(urllib.parse.urlparse(url).query).get("where", [""])[0]
+        res = []
+        if "principaux" in url and "0450855K" in w:
+            res = [{"uai": "0450855K", "uo_lib": "Université (fictive)", "com_nom": "Orléans", "type_d_etablissement": "Université", "coordonnees": {"lon": 1.935, "lat": 47.845}}]
+        if "implantations" in url and "0410978R" in w:
+            res = [{"implantation_code_uai": "0410978R", "implantation_lib": "IUT (fictif)", "localite_acheminement": "Blois", "coordonnees": [47.58, 1.30]}]
+        appels.ban.append(url)
+        route.fulfill(json={"results": res})
+    page.route("https://data.enseignementsup-recherche.gouv.fr/**", esr)
     page.route("https://data.geopf.fr/**", lambda r: r.fulfill(json={"features": [{"properties": {"label": "Orléans 45000", "city": "Orléans"}, "geometry": {"coordinates": [1.909, 47.902]}}]}))
     page.goto(serveur + ("/index.html" if grist else "/index.html?demo"))
     page.wait_for_function("window.cartoProfs")
@@ -331,12 +345,13 @@ def test_recherche_filtre_depart(page_prete):
     expect(page.locator("#resultats")).to_contain_text("Commune")
     # filtre
     page.locator("#b-filtre").click()
-    page.locator("#fi-col").select_option("Grade")
+    page.locator("#fi-ajout").select_option("Grade")
     page.locator('#pop input[data-fv="Certifié"]').uncheck()
-    assert len(etat(page, "visibles")) == 3
-    expect(page.locator("#lib-filtre")).to_have_text("Filtre : Grade")
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 3")
+    expect(page.locator("#lib-filtre")).to_have_text("Filtres (1)")
     page.locator("#fi-retirer").click()
-    assert len(etat(page, "visibles")) == 5
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 5")
+    page.keyboard.press("Escape")
     # point de départ
     page.locator("#b-depart").click()
     page.locator("#de-q").fill("Orléans")
@@ -457,7 +472,7 @@ def test_menu_aide_et_presentation(page_prete):
     page.locator("#b-aide").click()
     expect(page.get_by_role("menuitem", name="Visite guidée")).to_be_visible()
     page.get_by_role("menuitem", name="Quoi de neuf ?").click()
-    expect(page.locator("#modale")).to_contain_text("Version 1.3.1")
+    expect(page.locator("#modale")).to_contain_text("Version 1.4.0")
     page.keyboard.press("Escape")
     page.locator("#b-presentation").click()
     expect(page.locator("#barre")).to_be_hidden()
@@ -732,3 +747,107 @@ def test_page_accueil(navigateur, serveur):
     expect(page.frame_locator("iframe").locator("#visite")).to_contain_text("1 sur")
     assert erreurs == [], erreurs
     ctx.close()
+
+
+# ---------------------------------------------------------------------------------------------- secours, filtres, durées
+def test_sources_de_secours(navigateur, serveur):
+    page, appels, erreurs = preparer(navigateur, serveur)
+    page.evaluate("localStorage.setItem('carto-profs:visite', JSON.stringify({n: 9, finie: true}))")
+    lignes = LIGNES[:2] + [
+        {"id": 30, "Nom": "UNIV", "Prenom": "A", "Rne": "0450855K"},
+        {"id": 31, "Nom": "RECT", "Prenom": "B", "Rne": "0450080T"},
+        {"id": 32, "Nom": "IUT", "Prenom": "C", "Rne": "0410978R"},
+        {"id": 33, "Nom": "NULLE", "Prenom": "D", "Rne": "0459998Q"},
+    ]
+    envoyer(page, lignes=lignes, options=CONFIGURE)
+    page.wait_for_function("document.querySelectorAll('.pt').length === 4")
+    e = {x["uai"]: x for x in etat(page, "etabs")}
+    assert e["0450080T"]["nom"] == "Rectorat (fictif)" and e["0450080T"]["typeLib"] == "Service Administratif"
+    assert e["0450855K"]["nom"] == "Université (fictive)" and abs(e["0450855K"]["lat"] - 47.845) < 1e-6
+    assert e["0410978R"]["commune"] == "Blois" and abs(e["0410978R"]["lon"] - 1.30) < 1e-6
+    assert [x["uai"] for x in etat(page, "introuvables")] == ["0459998Q"]
+    page.locator('.pt[data-uai="0450855K"]').dispatch_event('click')   # points superposés sur la fausse carte
+    expect(page.locator("#fiche")).to_contain_text("Position : Principaux établissements d’enseignement supérieur")
+    expect(page.locator("#fiche")).not_to_contain_text("Public")
+    # copie gardée : au rechargement, plus aucune requête pour ces UAI
+    n = len(appels.annu) + len(appels.ban)
+    page.reload(); page.wait_for_function("window.cartoProfs")
+    envoyer(page, lignes=lignes, options=CONFIGURE)
+    page.wait_for_function("document.querySelectorAll('.pt').length === 4")
+    assert len(appels.annu) + len(appels.ban) == n
+    assert erreurs == []
+    page.context.close()
+
+
+def test_filtres_multiples_et_durees(navigateur, serveur):
+    import datetime
+    page, _, erreurs = preparer(navigateur, serveur)
+    page.evaluate("localStorage.setItem('carto-profs:visite', JSON.stringify({n: 9, finie: true}))")
+    L = [
+        {"id": 1, "Nom": "UN", "Prenom": "A", "Corps": "CERT", "Echelon": "7", "Date_naissance": "15/03/1980", "Debut_affect": "2023-09-01", "Rne": "0459901A"},
+        {"id": 2, "Nom": "DEUX", "Prenom": "B", "Corps": "CERT", "Echelon": "9", "Date_naissance": "01/01/1975", "Debut_affect": "2010-09-01", "Rne": "0459901A"},
+        {"id": 3, "Nom": "TROIS", "Prenom": "C", "Corps": "CERT", "Echelon": "5", "Date_naissance": "02/02/1990", "Debut_affect": "2020-09-01", "Rne": "0379901B"},
+        {"id": 4, "Nom": "QUATRE", "Prenom": "D", "Corps": "AGREG", "Echelon": "6", "Date_naissance": "03/03/1985", "Debut_affect": "2024-09-01", "Rne": "0189901C"},
+        {"id": 5, "Nom": "CINQ", "Prenom": "E", "Corps": "CERT", "Echelon": "10", "Date_naissance": None, "Debut_affect": "2015-09-01", "Rne": "0189901C"},
+    ]
+    envoyer(page, lignes=L, options=CONFIGURE)
+    page.wait_for_function("document.querySelectorAll('.pt').length === 3")
+    ids = lambda: sorted(p["id"] for p in etat(page, "visibles"))
+    page.locator("#b-filtre").click()
+    pop = page.locator("#pop")
+    expect(pop.locator("#fi-ajout")).to_contain_text("Echelon (nombre)")
+    expect(pop.locator("#fi-ajout")).to_contain_text("Debut_affect (date → durée)")
+    # corps = CERT
+    pop.locator("#fi-ajout").select_option("Corps")
+    pop.locator('input[data-fv="AGREG"]').uncheck()
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 4")
+    # échelon de 6 à 9 : saisie du minimum, curseur pour le maximum
+    pop.locator("#fi-ajout").select_option("Echelon")
+    crit = pop.locator(".critere").nth(1)
+    crit.locator('[data-saisie="min"]').fill("6"); crit.locator('[data-saisie="min"]').dispatch_event("change")
+    crit.locator('input[type="range"][data-borne="max"]').fill("9")
+    expect(crit.locator(".crit-lib")).to_have_text("6 – 9")
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 2")
+    assert ids() == [1, 2]
+    # affecté depuis moins de 5 ans (saisie en années)
+    pop.locator("#fi-ajout").select_option("Debut_affect")
+    crit = pop.locator(".critere").nth(2)
+    expect(crit).to_contain_text("Depuis Debut_affect")
+    crit.locator('[data-saisie="max"]').fill("5"); crit.locator('[data-saisie="max"]').dispatch_event("change")
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 1")
+    assert ids() == [1]
+    expect(page.locator("#lib-filtre")).to_have_text("Filtres (3)")
+    expect(pop.locator("#fi-compte")).to_have_text("1 personne affichée")
+    # retirer un critère
+    pop.locator('[data-fi-suppr]').nth(2).click()
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 2")
+    # âge : critère sur la date de naissance, lignes sans date exclues par défaut
+    pop.locator("#fi-retirer").click()
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 5")
+    pop.locator("#fi-ajout").select_option("Date_naissance")
+    expect(pop.locator(".critere")).to_contain_text("Âge (Date_naissance)")
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 4")
+    pop.locator('input[data-vides]').check()
+    page.wait_for_function("window.cartoProfs.etat().visibles.length === 5")
+    page.keyboard.press("Escape")
+    # bulles : âge et durée calculés
+    page.locator("#b-bulles").click()
+    expect(page.locator("#modale")).to_contain_text("âge (Date_naissance)")
+    page.locator("#bu-modele").fill("{Nom} {Date_naissance|age} · {Debut_affect|duree}")
+    page.locator("#bu-enregistrer").click()
+    auj = datetime.date.today()
+    age = auj.year - 1980 - ((auj.month, auj.day) < (3, 15))
+    page.locator('.pt[data-uai="0459901A"]').click()
+    expect(page.locator("#fiche")).to_contain_text(f"DEUX")
+    expect(page.locator("#fiche")).to_contain_text(f"UN {age} ans · ")
+    assert erreurs == []
+    page.context.close()
+
+
+def test_durees_pures(page_prete):
+    page, _, _ = page_prete
+    r = page.evaluate("""() => {
+      const f = window.cartoProfs;
+      return [f.fmtDuree(0), f.fmtDuree(6), f.fmtDuree(12), f.fmtDuree(27), f.moisDepuis(new Date(2020, 0, 15), new Date(2026, 10, 14)), f.dateDe('03/09/2021').getFullYear(), f.dateDe('2021-09-03').getMonth()];
+    }""")
+    assert r == ["moins d’un mois", "6 mois", "1 an", "2 ans 3 mois", 81, 2021, 8]

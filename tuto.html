@@ -133,7 +133,7 @@ summary { cursor: pointer; font-weight: 600; }
   <p>Un bandeau orange en bas à gauche signale les lignes qui ne sont pas sur la carte. En cliquant dessus :</p>
   <ul>
     <li><b>Format incorrect</b> : il manque un chiffre, la lettre, ou il y a un espace. Corrigez la cellule.</li>
-    <li><b>Inconnu dans l’open data</b> : l’établissement a fermé ou fusionné, ou l’UAI est mal saisi. Le lien « Chercher » ouvre l’annuaire de l’éducation.</li>
+    <li><b>Inconnu dans l’open data</b> : l’UAI n’est ni dans le jeu des écoles, collèges et lycées, ni dans l’annuaire de l’éducation (CIO, services administratifs, CFA…), ni dans les données de l’enseignement supérieur (universités, IUT, écoles). L’établissement a fermé ou fusionné, ou l’UAI est mal saisi. Le lien « Chercher » ouvre l’annuaire de l’éducation ; des colonnes Latitude et Longitude permettent aussi de le placer à la main.</li>
     <li><b>Voir dans Grist</b> sélectionne la ligne dans votre table pour la corriger.</li>
   </ul>
   <div class="astuce"><b>Astuce pour « Voir dans Grist »</b> : ajoutez à la page une vue <b>Fiche</b> (ou Table) de la même table et, dans son panneau de droite, <b>Sélectionner par → Carto-profs</b>. Le bouton crayon d’une personne affiche alors sa ligne, prête à être modifiée.</div>
@@ -200,7 +200,8 @@ summary { cursor: pointer; font-weight: 600; }
   <p>Le bouton <b>Bulles</b> règle ce que l’on voit, avec un aperçu sur un vrai établissement de votre table :</p>
   <ul>
     <li><b>Survol</b> : commune, type d’établissement, nombre de personnes.</li>
-    <li><b>Ligne d’une personne</b> : cochez les colonnes à montrer et rangez-les avec les flèches ; le <b>modèle</b> se remplit tout seul, par exemple <code>{Nom} {Prenom} — {Grade} · {nbre_heure} h</code>. Vous pouvez l’écrire vous-même : le texte entre accolades est remplacé par la valeur de la colonne. Si une valeur est vide, le séparateur disparaît.</li>
+    <li><b>Ligne d’une personne</b> : cochez les colonnes à montrer et rangez-les avec les flèches ; le <b>modèle</b> se remplit tout seul, par exemple <code>{Nom} {Prenom} — {Grade} · {nbre_heure} h</code>. Vous pouvez l’écrire vous-même : le texte entre accolades est remplacé par la valeur de la colonne. Si une valeur est vide, le séparateur disparaît.
+      Champs calculés à partir d’une date : <code>{Date_naissance|age}</code> donne « 46 ans », <code>{Debut_affect|duree}</code> donne « 3 ans 2 mois » (boutons sous le modèle).</li>
     <li><b>Liens et tri</b> : lien « écrire » sur chaque personne, bouton « voir la ligne dans Grist », ordre des personnes.</li>
   </ul>
   <div class="attention">Toutes les colonnes peuvent apparaître dans les bulles, y compris des informations personnelles (date de naissance, notes, téléphone…). Tout lecteur du document les verra : ne cochez que ce qui est utile.</div>
@@ -211,7 +212,13 @@ summary { cursor: pointer; font-weight: 600; }
   <ul>
     <li><b>Recherche</b> (en haut à gauche) : un nom, un établissement, un UAI ou une commune ; flèches puis Entrée. La carte s’y place et ouvre la fiche.</li>
     <li><b>Légende</b> : cliquez une catégorie pour la masquer ou la montrer. Le nombre à droite compte les personnes.</li>
-    <li><b>Filtrer</b> : choisissez une colonne (statut, département…) puis décochez des valeurs. « Retirer le filtre » remet tout.</li>
+    <li><b>Filtrer</b> : ajoutez un ou plusieurs <b>critères</b>, qui se cumulent. Pour une colonne de texte (corps, statut,
+      département…), cochez les valeurs à garder. Pour une colonne de <b>nombres</b> (échelon, heures…), réglez l’intervalle
+      avec le curseur à deux poignées ou tapez les bornes. Pour une colonne de <b>dates</b> (Debut_affect, Entree_grade,
+      Date_naissance…), l’intervalle porte sur la <b>durée jusqu’à aujourd’hui</b>, en années : « affecté depuis moins de 5 ans »
+      = de 0 à 5 ; sur une date de naissance, c’est l’<b>âge</b>. Exemple : Corps = CERT, Echelon de 6 à 9, Date_echelon
+      depuis plus de 0,5 an. Les lignes sans valeur sont écartées, sauf si vous cochez « Garder les lignes sans valeur ».
+      « Tout retirer » remet tout.</li>
     <li><b>Fond d’établissements</b> (dans la légende) : affiche en gris tous les établissements d’une académie, filtrables par type (écoles, collèges, lycées, EREA) et par secteur (public, privé).</li>
   </ul>
 </section>

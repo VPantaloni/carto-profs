@@ -153,6 +153,22 @@ body.mode-depart #carte .maplibregl-canvas-container { cursor: crosshair; }
 .champ > span { font-weight: 600; }
 input[type="text"], input[type="search"]:not(#recherche), select, textarea { min-height: 34px; padding: 4px 8px; border-radius: 8px; border: 1px solid var(--ligne); background: var(--panneau); }
 textarea { resize: vertical; }
+.critere { border: 1px solid var(--ligne); border-radius: 10px; padding: 8px 10px; display: flex; flex-direction: column; gap: 6px; }
+.crit-tete { display: flex; align-items: center; gap: 6px; }
+.crit-tete b { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.crit-valeurs { gap: 4px; font-size: 12px; }
+.crit-valeurs input[type="number"] { width: 72px; min-height: 30px; padding: 2px 6px; border-radius: 6px; border: 1px solid var(--ligne); background: var(--panneau); }
+.crit-lib { margin-left: auto; color: var(--accent-fonce); font-weight: 600; }
+.critere .liste-cases { max-height: 180px; }
+/* curseur à deux poignées : deux curseurs superposés, seules les poignées réagissent */
+.double { position: relative; height: 28px; }
+.double::before { content: ""; position: absolute; left: 8px; right: 8px; top: 12px; height: 4px; border-radius: 2px; background: linear-gradient(90deg, var(--ligne) var(--a), var(--accent) var(--a), var(--accent) var(--b), var(--ligne) var(--b)); }
+.double input[type="range"] { position: absolute; inset: 0; width: 100%; margin: 0; background: none; pointer-events: none; -webkit-appearance: none; appearance: none; }
+.double input[type="range"]::-webkit-slider-runnable-track { background: none; height: 28px; }
+.double input[type="range"]::-moz-range-track { background: none; }
+.double input[type="range"]::-webkit-slider-thumb { -webkit-appearance: none; pointer-events: auto; width: 18px; height: 18px; margin-top: 5px; border-radius: 50%; background: var(--panneau); border: 3px solid var(--accent); cursor: pointer; }
+.double input[type="range"]::-moz-range-thumb { pointer-events: auto; width: 14px; height: 14px; border-radius: 50%; background: var(--panneau); border: 3px solid var(--accent); cursor: pointer; }
+.double input[type="range"]:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--accent-fonce); outline-offset: 2px; }
 .liste-cases { display: flex; flex-direction: column; max-height: 260px; overflow: auto; border: 1px solid var(--ligne); border-radius: 8px; }
 .liste-cases label { display: flex; align-items: center; gap: 8px; min-height: 32px; padding: 0 8px; border-bottom: 1px solid var(--ligne); cursor: pointer; }
 .liste-cases label:last-child { border-bottom: 0; }
@@ -349,8 +365,13 @@ body.presentation .legende { top: 12px; }
 // Carto-profs — carte des personnes d'une table Grist, placées par l'UAI de leur établissement (open data).
 // Un seul fichier, sans étape de construction. Icônes : Lucide (https://lucide.dev, licence ISC).
 // ============================================================================================================
-const VERSION = '1.3.1';
+const VERSION = '1.4.0';
 const NOUVEAUTES = [
+  { version: '1.4.0', date: 'novembre 2026', points: [
+    'Filtres à plusieurs critères cumulés : cases pour le texte, curseur à deux poignées pour les nombres (échelon de 6 à 9…) et pour les durées (affecté depuis moins de 5 ans, âge…).',
+    'Bulles : âge et durée depuis une date ({Date_naissance|age}, {Debut_affect|duree}).',
+    'Établissements absents du jeu des écoles, collèges et lycées (université, IUT, rectorat, CFA…) : recherchés aussi dans l’annuaire de l’éducation et les données de l’enseignement supérieur.'
+  ] },
   { version: '1.3.1', date: 'novembre 2026', points: [
     'Bouton « Voir tous les points » sous la boussole : recadre la carte sur l’ensemble des points.',
     'Zones de remplacement (UAI du type 037002ZK) : une bulle par zone, rangée autour des départements avec un trait vers sa zone (bord ouest, nord… d’après son nom) ; case « Groupes de ZR » dans la légende.',
@@ -492,7 +513,8 @@ let acces = null, nomTable = '';
 let personnes = [], visibles = [], etabs = [], parUai = new Map(), introuvables = [], sansUai = [];
 let categories = [], infoCouleur = null;
 const masquees = new Set();
-let filtre = null;                    // { col, garder: Set }
+let filtres = [];                     // critères cumulés (ET) : { id, col, type: 'texte'|'nombre'|'duree', garder: Set, min, max, vides }
+let nFiltre = 0;
 const selection = new Set();          // id des lignes Grist
 let geo = local.lire('geo', {});      // UAI → { d: données | null, t: date }
 let annu = local.lire('annuaire', {});
@@ -518,6 +540,34 @@ function nombre(v) {
   if (typeof v === 'string' && v.trim()) { const n = Number(v.replace(',', '.').trim()); return isFinite(n) ? n : null; }
   return null;
 }
+// Dates : colonnes Date de Grist (objets Date) ou texte « 12/03/1979 », « 1979-03-12 ».
+function dateDe(v) {
+  if (v instanceof Date) return isNaN(v) ? null : v;
+  if (typeof v === 'string') {
+    let m = v.trim().match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{4})\b/); if (m) return new Date(+m[3], +m[2] - 1, +m[1]);
+    m = v.trim().match(/^(\d{4})-(\d{1,2})-(\d{1,2})\b/); if (m) return new Date(+m[1], +m[2] - 1, +m[3]);
+  }
+  return null;
+}
+function moisDepuis(d, auj = new Date()) {
+  if (!d) return null;
+  let m = (auj.getFullYear() - d.getFullYear()) * 12 + auj.getMonth() - d.getMonth();
+  if (auj.getDate() < d.getDate()) m--;
+  return m;
+}
+function fmtDuree(m) {
+  if (m == null) return '';
+  const a = Math.floor(Math.abs(m) / 12), r = Math.abs(m) % 12;
+  const t = [a ? `${a} an${a > 1 ? 's' : ''}` : '', r ? `${r} mois` : ''].filter(Boolean).join(' ') || 'moins d’un mois';
+  return m < 0 ? `dans ${t}` : t;
+}
+const fmtAge = m => m == null ? '' : `${Math.floor(m / 12)} ans`;
+function estColonneDate(c, recs = lignes) {
+  let n = 0, t = 0;
+  for (const r of recs.slice(0, 300)) { const v = r[c]; if (v == null || v === '') continue; t++; if (dateDe(v)) n++; }
+  return t > 0 && n / t >= .6;
+}
+const estColonneNaissance = c => /naiss/i.test(sansAccents(c));
 const RE_UAI = /^\d{7}[A-Z]$/;
 const normUai = v => texte(v).toUpperCase().replace(/\s+/g, '');
 const RE_HEX = /^#[0-9a-f]{6}$/i;
@@ -677,7 +727,14 @@ const couleurCat = k => (categories.find(c => c.cle === k) || {}).couleur || SAN
 const catVisible = p => p.cats.find(k => !masquees.has(k)) || p.cat;
 
 // ------------------------------------------------------------------------------------------------ données → établissements
-function passeFiltre(p) { return !filtre || filtre.garder.has(texte(p.rec[filtre.col]) || 'Sans valeur'); }
+function valeurFiltre(f, p) { const v = p.rec[f.col]; return f.type === 'duree' ? moisDepuis(dateDe(v)) : nombre(v); }
+function passeFiltre(p) {
+  return filtres.every(f => {
+    if (f.type === 'texte') return f.garder.has(texte(p.rec[f.col]) || 'Sans valeur');
+    const x = valeurFiltre(f, p);
+    return x == null ? f.vides : x >= f.min && x <= f.max;
+  });
+}
 function infoEtab(uai, recs) {
   const g = geo[uai] && geo[uai].d;
   const cE = col('Etablissement'), cC = col('Commune'), cT = col('Type'), cD = col('Departement');
@@ -687,7 +744,8 @@ function infoEtab(uai, recs) {
     commune: (g && g.commune) || (cC && texte(r0[cC])) || '',
     type: g ? typeEtab(g.nature) : '',
     typeLib: g ? (TYPES[typeEtab(g.nature)] === 'Autre' ? (g.natureLib || 'Autre') : TYPES[typeEtab(g.nature)]) : (cT && texte(r0[cT])) || '',
-    secteur: g ? secteurDe(g.secteur) : '',
+    secteur: g && g.secteur ? secteurDe(g.secteur) : '',
+    source: g && g.source ? NOM_SOURCE[g.source] : '',
     dep: (g && g.dep) || (cD && texte(r0[cD])) || (/^\d{3}/.test(uai) ? nomDep(codeDep(uai)) : ''),
     academie: (g && g.academie) || '',
     adresse: g ? [g.adresse, [g.cp, g.commune].filter(Boolean).join(' ')].filter(Boolean).join(', ') : '',
@@ -714,7 +772,7 @@ function recalculer() {
   personnes = lignes.map(r => ({ id: r.id, rec: r, uai: cU ? normUai(r[cU]) : '' }));
   resoudreGroupes();
   if (reglages.couleur.source === 'groupes') personnes.push(...libres);   // membres hors table : seulement en mode groupes
-  if (filtre && !colonnesTable.includes(filtre.col)) filtre = null;
+  filtres = filtres.filter(f => colonnesTable.includes(f.col));
   preparerCategories();
   // regroupement par UAI (personnes filtrées et non masquées)
   visibles = personnes.filter(p => p.uai && passeFiltre(p) && p.cats.some(k => !masquees.has(k)));
@@ -769,7 +827,54 @@ function afficherTout() {
 }
 
 // ------------------------------------------------------------------------------------------------ open data
-function frais(c) { return c && (Date.now() - c.t) < (c.d ? DUREE_CACHE : DUREE_ABSENT); }
+// v: 2 = absence vérifiée aussi dans les sources de secours (une absence d’avant la 1.4 est redemandée)
+function frais(c) { return c && (c.d || c.v === 2) && (Date.now() - c.t) < (c.d ? DUREE_CACHE : DUREE_ABSENT); }
+// Sources de secours, interrogées pour les UAI absents du jeu « Adresse et géolocalisation » (supérieur, rectorat,
+// CFA…). Recherche plein texte sur l’UAI, lecture des champs quel que soit leur nom.
+const SOURCES_SECOURS = [
+  { cle: 'annuaire', nom: 'Annuaire de l’éducation', url: API_ANNU },
+  { cle: 'esr', nom: 'Principaux établissements d’enseignement supérieur', url: 'https://data.enseignementsup-recherche.gouv.fr/api/explore/v2.1/catalog/datasets/fr-esr-principaux-etablissements-enseignement-superieur' },
+  { cle: 'implantations', nom: 'Implantations de l’enseignement supérieur public', url: 'https://data.enseignementsup-recherche.gouv.fr/api/explore/v2.1/catalog/datasets/fr-esr-implantations_etablissements_d_enseignement_superieur_publics' }
+];
+const NOM_SOURCE = Object.fromEntries(SOURCES_SECOURS.map(x => [x.cle, x.nom]));
+function lireRecordSecours(x) {
+  const ch = Object.entries(x || {});
+  const str = re => { for (const [k, v] of ch) if (re.test(k) && typeof v === 'string' && v.trim()) return v.trim(); return ''; };
+  let lat = null, lon = null;
+  for (const [k, v] of ch) {
+    if (v && typeof v === 'object' && !Array.isArray(v) && 'lat' in v && 'lon' in v) { lat = nombre(v.lat); lon = nombre(v.lon); break; }
+    if (Array.isArray(v) && v.length === 2 && v.every(n => typeof n === 'number') && /coord|geo|position|point/i.test(k)) { [lat, lon] = v; break; }
+  }
+  if (lat == null) { lat = nombre(x.latitude ?? x.lat ?? x.latitude_y ?? x.coordonnee_y); lon = nombre(x.longitude ?? x.lon ?? x.lng ?? x.longitude_x ?? x.coordonnee_x); }
+  if (lat == null || lon == null || Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
+  return { lat, lon,
+    nom: str(/^(nom_etablissement|appellation_officielle|uo_lib|implantation_lib|libelle|nom|denomination\w*|etablissement_lib\w*)$/i) || str(/(^|_)(lib|nom)(_|$)/i),
+    commune: str(/^(nom_commune|libelle_commune|com_nom|commune|localite\w*|ville)$/i),
+    natureLib: str(/^(type_etablissement|type_d_etablissement|nature_uai_libe|type_uai\w*|type|categorie\w*)$/i),
+    secteur: str(/(secteur|statut)/i), academie: str(/academie/i), dep: str(/^(libelle_departement|nom_departement|dep_nom|departement)$/i),
+    adresse: str(/^(adresse_1|adresse|adresse_uai|adresse_postale)$/i), cp: str(/^(code_postal|code_postal_uai|cp)$/i) };
+}
+const contientUai = (x, u) => Object.values(x || {}).some(v => (Array.isArray(v) ? v : [v]).some(w => typeof w === 'string' && w.toUpperCase().split(/[^0-9A-Z]+/).includes(u)));
+async function chercherSecours(uais) {
+  let reste = [...uais];
+  for (const src of SOURCES_SECOURS) {
+    if (!reste.length) break;
+    try {
+      for (let i = 0; i < reste.length; i += 20) {
+        const paquet = reste.slice(i, i + 20);
+        const j = await lireJson(`${src.url}/records?${new URLSearchParams({ where: paquet.map(u => `"${u}"`).join(' OR '), limit: '100' })}`);
+        for (const x of j.results || []) for (const u of paquet) {
+          if (geo[u] && geo[u].d) continue;
+          if (!contientUai(x, u)) continue;
+          const d = lireRecordSecours(x); if (!d) continue;
+          geo[u] = { t: Date.now(), d: { ...d, source: src.cle } };
+        }
+      }
+    } catch (e) { /* source injoignable : on passe à la suivante */ }
+    reste = reste.filter(u => !(geo[u] && geo[u].d));
+  }
+  for (const u of reste) geo[u] = { t: Date.now(), d: null, v: 2 };
+}
 function sauverGeo() {
   if (!local.ecrire('geo', geo)) {    // place pleine : on ne garde que les UAI de cette table
     const garder = {}; for (const p of personnes) if (geo[p.uai]) garder[p.uai] = geo[p.uai];
@@ -802,7 +907,8 @@ async function geolocaliser() {
           dep: x.libelle_departement || '', adresse: x.adresse_uai || '', cp: x.code_postal_uai || '' } };
         if (geo[u].d.lat == null) geo[u].d = null;
       }
-      for (const u of paquet) if (!trouves.has(u)) geo[u] = { t: Date.now(), d: null };
+      const absents = paquet.filter(u => !trouves.has(u) || !geo[u].d);
+      if (absents.length) await chercherSecours(absents);
       change = true;
     }
   } catch (e) {
@@ -1280,8 +1386,8 @@ function majLibelles() {
   const c = colonneCouleurActive();
   $('lib-couleur').textContent = reglages.couleur.source === 'groupes' ? 'groupes' : reglages.couleur.source === 'colonne' ? 'colonne couleur' : (c || 'aucune');
   $('b-groupes').classList.toggle('actif', reglages.couleur.source === 'groupes');
-  $('lib-filtre').textContent = filtre ? `Filtre : ${filtre.col}` : 'Filtrer';
-  $('b-filtre').classList.toggle('actif', !!filtre);
+  $('lib-filtre').textContent = filtres.length ? `Filtres (${filtres.length})` : 'Filtrer';
+  $('b-filtre').classList.toggle('actif', filtres.length > 0);
 }
 let legendeRepliee = innerWidth < 700;
 function rendreLegende() {
@@ -1310,7 +1416,7 @@ function rendreLegende() {
 }
 function rendreStatut(message) {
   const n = visibles.length;
-  let h = `<span class="info">${pluriel(n, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtre || masquees.size ? ' (filtrés)' : ''}</span>`;
+  let h = `<span class="info">${pluriel(n, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtres.length || masquees.size ? ' (filtrés)' : ''}</span>`;
   if (geoEnCours || message) h += `<span class="info">${esc(message || 'Recherche des coordonnées des établissements…')}</span>`;
   if (DANS_GRIST && recuLignes && !lignes.length) h += `<span class="info">${ic('alert')} Aucune ligne reçue : la table est vide, ou la vue n’est pas liée à une table (panneau de droite → Données), ou l’accès est « Aucun accès ».</span>`;
   const nbI = new Set(introuvables.map(e => e.uai)).size;
@@ -1335,7 +1441,10 @@ function rendreModele(modele, r, html = true) {
   const parts = [], re = /\{([^{}]+)\}/g; let i = 0, m;
   while ((m = re.exec(modele))) {
     if (m.index > i) parts.push({ lit: modele.slice(i, m.index) });
-    parts.push({ c: m[1], v: colonnesTable.includes(m[1]) ? texte(r[m[1]]) : '' });
+    const [c, op] = m[1].split('|').map(x => x.trim());
+    let v = '';
+    if (colonnesTable.includes(c)) v = op === 'age' ? fmtAge(moisDepuis(dateDe(r[c]))) : op === 'duree' ? fmtDuree(moisDepuis(dateDe(r[c]))) : texte(r[c]);
+    parts.push({ c, v });
     i = re.lastIndex;
   }
   if (i < modele.length) parts.push({ lit: modele.slice(i) });
@@ -1383,6 +1492,7 @@ function htmlFiche(e, apercu = false) {
   }).join('');
   return `<div class="fiche-tete"><div><h2 id="fiche-titre">${esc(e.nom)}</h2><div class="sous">${esc(sous)}</div>
       ${e.adresse ? `<div class="sous">${esc(e.adresse)}</div>` : ''}
+      ${e.source ? `<div class="sous">Position : ${esc(e.source)}</div>` : ''}
       ${e.dist != null && depart ? `<div class="dist">à ${fmtKm(e.dist)} de ${esc(depart.nom)} (à vol d’oiseau)</div>` : ''}</div>
       ${apercu ? '' : `<button class="fermer" id="fiche-fermer" aria-label="Fermer la fiche">${ic('x')}</button>`}</div>
     <div class="liens">
@@ -1607,7 +1717,11 @@ function rendreBulles() {
       <label class="champ"><span>2. Modèle de la ligne <span style="font-weight:400;color:var(--doux)">(modifiable : le texte entre accolades est remplacé)</span></span>
         <input type="text" id="bu-modele" value="${esc(b.modele)}" spellcheck="false"></label>
       <div class="aide-texte">Cliquer un champ pour l’insérer à l’endroit du curseur :</div>
-      <div class="champs-insert">${colonnesTable.slice(0, 40).map(c => `<button class="puce" data-inserer="${esc(c)}">${ic('plus', 'width:12px;height:12px')} ${esc(c)}</button>`).join('')}</div>`;
+      <div class="champs-insert">${colonnesTable.slice(0, 40).map(c => `<button class="puce" data-inserer="${esc(c)}">${ic('plus', 'width:12px;height:12px')} ${esc(c)}</button>`).join('')}</div>
+      ${colonnesTable.some(c => estColonneDate(c)) ? `<div class="aide-texte">Champs calculés à partir des dates (jusqu’à aujourd’hui) :</div>
+      <div class="champs-insert">${colonnesTable.filter(c => estColonneDate(c)).map(c => estColonneNaissance(c)
+        ? `<button class="puce" data-inserer="${esc(c)}|age">${ic('plus', 'width:12px;height:12px')} âge (${esc(c)})</button>`
+        : `<button class="puce" data-inserer="${esc(c)}|duree">${ic('plus', 'width:12px;height:12px')} depuis ${esc(c)}</button>`).join('')}</div>` : ''}`;
   if (o === 'liens') corps = `<label class="case"><input type="checkbox" data-opt="mailParPersonne" ${b.mailParPersonne ? 'checked' : ''}>Lien « écrire » sur chaque personne ${col('Mail') ? `(colonne ${esc(col('Mail'))})` : '(aucune colonne mail trouvée)'}</label>
       <label class="case"><input type="checkbox" data-opt="lienGrist" ${b.lienGrist ? 'checked' : ''}>Bouton « voir la ligne dans Grist »</label>
       <label class="champ"><span>Trier les personnes par</span><select id="bu-tri"><option value="">${esc(col('Nom') || 'ordre de la table')} (par défaut)</option>
@@ -1629,7 +1743,7 @@ function ouvrirColonnes(premier = false) {
   const manq = [...parUaiI.values()].slice(0, 30).map(e => {
     const qui = e.pers.slice(0, 3).map(nomPersonne).join(', ') + (e.pers.length > 3 ? '…' : '');
     const aide = !RE_UAI.test(e.uai) ? 'Format incorrect : il faut 7 chiffres puis 1 lettre (exemple : 0451234A), sans espace.'
-      : 'Inconnu dans l’open data : établissement fermé ou fusionné, ou UAI mal saisi. Vérifier dans l’annuaire de l’éducation, ou donner une latitude et une longitude.';
+      : 'Inconnu des données ouvertes (établissements scolaires, annuaire de l’éducation, enseignement supérieur) : établissement fermé ou fusionné, ou UAI mal saisi. Vérifier dans l’annuaire de l’éducation, ou donner une latitude et une longitude.';
     const brut = texte(e.pers[0].rec[col('UAI')]) || e.uai;
     return `<div class="manquant"><div class="rangee"><code>${esc(brut)}</code><span style="color:var(--doux)">· ${esc(qui)}</span>
       <button class="btn petit" style="margin-left:auto" data-grist="${e.pers[0].id}">Voir dans Grist</button></div>
@@ -2054,34 +2168,77 @@ function ouvrirAjoutSelection(bouton) {
     <button class="lien-btn" data-pop-groupes style="align-self:flex-start">Gérer les groupes…</button>`, 280);
 }
 
-// --- filtre
-function ouvrirFiltre() {
-  const c = (filtre && filtre.col) || ($('pop').dataset.col) || colonneCouleurActive() || colonnesTable.find(x => analyserColonne(x).bon) || colonnesTable[0];
-  rendreFiltre(c, true);
+// --- filtres : plusieurs critères cumulés ; cases pour le texte, curseur à deux poignées pour les nombres et les durées
+function typeColonneFiltre(c) {
+  if (estColonneDate(c)) return 'duree';
+  let n = 0, t = 0;
+  for (const r of lignes.slice(0, 300)) { const v = r[c]; if (v == null || v === '' || typeof v === 'boolean') continue; t++; if (nombre(v) != null) n++; }
+  return t > 0 && n / t >= .8 ? 'nombre' : 'texte';
 }
-function rendreFiltre(c, ouvrir = false) {
-  const info = c ? analyserColonne(c) : null;
-  const vals = info && info.type === 'texte' ? info.valeurs.map(([v, n]) => [v || 'Sans valeur', n]) : [];
-  const vides = info ? info.total - info.remplis : 0;
-  if (vides && !vals.some(([v]) => v === 'Sans valeur')) vals.push(['Sans valeur', vides]);
-  const garder = filtre && filtre.col === c ? filtre.garder : null;
-  const html = `<h3>Filtrer les personnes</h3>
-    <label class="champ"><span>Selon la colonne</span><select id="fi-col">${colonnesTable.map(x => `<option ${x === c ? 'selected' : ''}>${esc(x)}</option>`).join('')}</select></label>
-    ${info && info.type === 'nombre' ? '<p class="aide-texte">Cette colonne a trop de valeurs différentes pour un filtre à cases.</p>' :
-      vals.length > 80 ? '<p class="aide-texte">Trop de valeurs différentes (plus de 80).</p>' :
-      `<div class="rangee"><button class="lien-btn" id="fi-tout">Tout cocher</button><button class="lien-btn" id="fi-rien">Tout décocher</button></div>
-      <div class="liste-cases">${vals.map(([v, n]) => `<label><input type="checkbox" data-fv="${esc(v)}" ${!garder || garder.has(v) ? 'checked' : ''}><span>${esc(v)}</span><span class="n">${n}</span></label>`).join('')}</div>`}
-    <div class="rangee fin"><button class="btn" id="fi-retirer" ${filtre ? '' : 'disabled'}>Retirer le filtre</button><button class="btn primaire" id="fi-fermer">Fermer</button></div>`;
-  if (ouvrir) ouvrirPop($('b-filtre'), html); else $('pop').innerHTML = html;
-  $('pop').dataset.col = c;
+function bornesFiltre(f) {
+  const xs = personnes.map(p => valeurFiltre(f, p)).filter(x => x != null);
+  return xs.length ? [Math.min(...xs), Math.max(...xs)] : [0, 0];
 }
-function lireFiltre() {
-  const c = $('pop').dataset.col, cases = [...$('pop').querySelectorAll('input[data-fv]')];
-  if (!cases.length) return;
-  const garder = new Set(cases.filter(x => x.checked).map(x => x.dataset.fv));
-  filtre = garder.size === cases.length ? null : { col: c, garder };
-  masquees.clear(); recalculer();
-  const r = $('fi-retirer'); if (r) r.disabled = !filtre;
+const libelleFiltre = f => f.type === 'duree' ? (estColonneNaissance(f.col) ? `Âge (${f.col})` : `Depuis ${f.col}`) : f.col;
+const fmtValeurFiltre = (f, x) => f.type === 'duree' ? (estColonneNaissance(f.col) ? fmtAge(x) : fmtDuree(x)) : (Math.round(x * 100) / 100).toLocaleString('fr-FR');
+function descriptionFiltre(f) {
+  if (f.type === 'texte') return `${f.col} : ${[...f.garder].slice(0, 4).join(', ')}${f.garder.size > 4 ? '…' : ''}`;
+  return `${libelleFiltre(f)} de ${fmtValeurFiltre(f, f.min)} à ${fmtValeurFiltre(f, f.max)}`;
+}
+function nouveauFiltre(c) {
+  const f = { id: ++nFiltre, col: c, type: typeColonneFiltre(c), vides: false };
+  if (f.type === 'texte') { const i = analyserColonne(c); f.garder = new Set((i.valeurs || []).map(([v]) => v || 'Sans valeur')); if (i.total > i.remplis) f.garder.add('Sans valeur'); }
+  else { [f.min, f.max] = bornesFiltre(f); }
+  return f;
+}
+function htmlCritere(f) {
+  const tete = `<div class="crit-tete"><b>${esc(libelleFiltre(f))}</b><span class="etiq">${f.type === 'texte' ? 'valeurs' : f.type === 'nombre' ? 'nombre' : 'durée jusqu’à aujourd’hui'}</span>
+    <button class="mini" data-fi-suppr="${f.id}" aria-label="Retirer le critère ${esc(libelleFiltre(f))}" title="Retirer ce critère">${ic('x')}</button></div>`;
+  if (f.type === 'texte') {
+    const i = analyserColonne(f.col);
+    const vals = (i.valeurs || []).map(([v, n]) => [v || 'Sans valeur', n]);
+    if (i.total > i.remplis && !vals.some(([v]) => v === 'Sans valeur')) vals.push(['Sans valeur', i.total - i.remplis]);
+    if (vals.length > 80) return `<div class="critere">${tete}<p class="aide-texte">Trop de valeurs différentes (plus de 80) pour des cases.</p></div>`;
+    return `<div class="critere">${tete}<div class="rangee"><button class="lien-btn" data-fi-tout="${f.id}">Tout cocher</button><button class="lien-btn" data-fi-rien="${f.id}">Tout décocher</button></div>
+      <div class="liste-cases">${vals.map(([v, n]) => `<label><input type="checkbox" data-fi="${f.id}" data-fv="${esc(v)}" ${f.garder.has(v) ? 'checked' : ''}><span>${esc(v)}</span><span class="n">${n}</span></label>`).join('')}</div></div>`;
+  }
+  const [a, b] = bornesFiltre(f), pas = f.type === 'nombre' && !Number.isInteger(a + b) ? .1 : 1;
+  const enAns = f.type === 'duree';
+  const saisie = x => enAns ? Math.round(x / 12 * 10) / 10 : x;
+  return `<div class="critere">${tete}
+    <div class="double" style="--a:${b > a ? (f.min - a) / (b - a) * 100 : 0}%;--b:${b > a ? (f.max - a) / (b - a) * 100 : 100}%">
+      <input type="range" min="${a}" max="${b}" step="${pas}" value="${f.min}" data-fi="${f.id}" data-borne="min" aria-label="${esc(libelleFiltre(f))} : minimum">
+      <input type="range" min="${a}" max="${b}" step="${pas}" value="${f.max}" data-fi="${f.id}" data-borne="max" aria-label="${esc(libelleFiltre(f))} : maximum"></div>
+    <div class="rangee crit-valeurs"><span>de</span><input type="number" data-fi="${f.id}" data-saisie="min" value="${saisie(f.min)}" step="${enAns ? .5 : pas}" aria-label="Minimum${enAns ? ' en années' : ''}">
+      <span>à</span><input type="number" data-fi="${f.id}" data-saisie="max" value="${saisie(f.max)}" step="${enAns ? .5 : pas}" aria-label="Maximum${enAns ? ' en années' : ''}">${enAns ? '<span>ans</span>' : ''}
+      <span class="crit-lib" data-fi-lib="${f.id}">${esc(fmtValeurFiltre(f, f.min))} – ${esc(fmtValeurFiltre(f, f.max))}</span></div>
+    <label class="case"><input type="checkbox" data-fi="${f.id}" data-vides ${f.vides ? 'checked' : ''}>Garder les lignes sans valeur</label></div>`;
+}
+function rendreFiltre(ouvrir = false) {
+  const dispo = colonnesTable.filter(c => c !== col('UAI'));
+  const type = c => ({ texte: 'valeurs', nombre: 'nombre', duree: 'date → durée' })[typeColonneFiltre(c)];
+  const html = `<div class="rangee"><h3 style="flex:1">Filtres</h3><span class="aide-texte" id="fi-compte">${pluriel(visibles.length, 'personne affichée', 'personnes affichées')}</span></div>
+    ${filtres.length ? filtres.map(htmlCritere).join('') : '<p class="aide-texte" style="margin:0">Aucun critère : toutes les personnes sont affichées. Ajoutez un ou plusieurs critères ; ils se cumulent (par exemple Grade = CERT, Echelon de 6 à 9, affecté depuis moins de 5 ans).</p>'}
+    <label class="champ"><span>${filtres.length ? 'Ajouter un autre critère' : 'Ajouter un critère'}</span><select id="fi-ajout"><option value="">— choisir une colonne —</option>
+      ${dispo.map(c => `<option value="${esc(c)}">${esc(c)} (${type(c)})</option>`).join('')}</select></label>
+    <div class="rangee fin"><button class="btn" id="fi-retirer" ${filtres.length ? '' : 'disabled'}>Tout retirer</button><button class="btn primaire" id="fi-fermer">Fermer</button></div>`;
+  if (ouvrir) ouvrirPop($('b-filtre'), html, 380); else { const y = $('pop').scrollTop; $('pop').innerHTML = html; $('pop').scrollTop = y; }
+}
+const ouvrirFiltre = () => rendreFiltre(true);
+let rafFiltre = 0;
+function appliquerFiltres() {   // pendant un glissement : recalcul au plus une fois par image, sans redessiner le panneau
+  if (rafFiltre) return;
+  rafFiltre = requestAnimationFrame(() => { rafFiltre = 0; masquees.clear(); recalculer(); const c = $('fi-compte'); if (c) c.textContent = pluriel(visibles.length, 'personne affichée', 'personnes affichées'); });
+}
+function majCurseur(f) {
+  const d = $('pop').querySelector(`input[type="range"][data-fi="${f.id}"]`).parentElement;
+  const [a, b] = bornesFiltre(f);
+  d.style.setProperty('--a', (b > a ? (f.min - a) / (b - a) * 100 : 0) + '%'); d.style.setProperty('--b', (b > a ? (f.max - a) / (b - a) * 100 : 100) + '%');
+  d.querySelector('[data-borne="min"]').value = f.min; d.querySelector('[data-borne="max"]').value = f.max;
+  const en = f.type === 'duree';
+  $('pop').querySelector(`[data-fi="${f.id}"][data-saisie="min"]`).value = en ? Math.round(f.min / 12 * 10) / 10 : f.min;
+  $('pop').querySelector(`[data-fi="${f.id}"][data-saisie="max"]`).value = en ? Math.round(f.max / 12 * 10) / 10 : f.max;
+  $('pop').querySelector(`[data-fi-lib="${f.id}"]`).textContent = `${fmtValeurFiltre(f, f.min)} – ${fmtValeurFiltre(f, f.max)}`;
 }
 
 // --- départ
@@ -2191,7 +2348,7 @@ function exporterPng() {
 }
 function imprimer() {
   const c = colonneCouleurActive();
-  $('impression').innerHTML = `<h1>${esc(nomTable || 'Carto-profs')}</h1><div>${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${c ? ` · couleurs : ${esc(c)}` : ''}${filtre ? ` · filtre sur ${esc(filtre.col)}` : ''} · ${new Date().toLocaleDateString('fr-FR')}</div>`;
+  $('impression').innerHTML = `<h1>${esc(nomTable || 'Carto-profs')}</h1><div>${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${c ? ` · couleurs : ${esc(c)}` : ''}${filtres.length ? ` · filtres : ${esc(filtres.map(descriptionFiltre).join(' ; '))}` : ''} · ${new Date().toLocaleDateString('fr-FR')}</div>`;
   const repl = legendeRepliee; legendeRepliee = false; rendreLegende();
   if (map) map.resize();
   setTimeout(() => { window.print(); legendeRepliee = repl; rendreLegende(); if (map) map.resize(); }, 250);
@@ -2330,7 +2487,7 @@ function rendreTableau() {
   const tousCoches = liste.length && liste.every(e => e.pers.every(p => selection.has(p.id)));
   $('tableau').innerHTML = `<div class="tableau-int">
     <div class="rangee"><button class="btn" id="tab-retour">${ic('back')}Carte</button><h1>Tableau de bord</h1>
-      <span style="color:var(--doux)">${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtre || masquees.size ? ' · filtres de la carte appliqués' : ''}</span>
+      <span style="color:var(--doux)">${pluriel(visibles.length, 'personne', 'personnes')} · ${pluriel(etabs.length, 'établissement', 'établissements')}${filtres.length || masquees.size ? ' · filtres de la carte appliqués' : ''}</span>
       <span style="flex:1"></span><button class="btn" data-export="csv-etabs">${ic('file-down')}CSV</button></div>
     <div class="blocs">${barres('Par département', compte(e => e.dep), '#33c1e8')}${barres('Par type d’établissement', compte(e => e.typeLib), '#64748b')}${barres(`Par catégorie (${reglages.couleur.source === 'groupes' ? 'groupes' : colonneCouleurActive() || 'aucune'})`, cats)}</div>
     <section class="bloc" id="liste-etabs" aria-label="Liste des établissements">
@@ -2525,8 +2682,17 @@ $('pop').addEventListener('change', async ev => {
     const b = popPour; fermerPop(); if (b && document.body.contains(b)) b.focus();
     return;
   }
-  if (ev.target.id === 'fi-col') { rendreFiltre(ev.target.value); return; }
-  if (ev.target.dataset.fv != null) return lireFiltre();
+  if (ev.target.id === 'fi-ajout' && ev.target.value) { filtres.push(nouveauFiltre(ev.target.value)); appliquerFiltres(); rendreFiltre(); const d = $('pop').querySelectorAll('.critere'); if (d.length) d[d.length - 1].scrollIntoView({ block: 'nearest' }); return; }
+  const fi = ev.target.dataset.fi && filtres.find(f => f.id === +ev.target.dataset.fi);
+  if (fi && ev.target.dataset.fv != null) { ev.target.checked ? fi.garder.add(ev.target.dataset.fv) : fi.garder.delete(ev.target.dataset.fv); return appliquerFiltres(); }
+  if (fi && ev.target.dataset.vides != null) { fi.vides = ev.target.checked; return appliquerFiltres(); }
+  if (fi && ev.target.dataset.saisie) {
+    let x = Number(ev.target.value); if (!isFinite(x)) return;
+    if (fi.type === 'duree') x = Math.round(x * 12);
+    const [a, b] = bornesFiltre(fi); x = Math.max(a, Math.min(b, x));
+    if (ev.target.dataset.saisie === 'min') fi.min = Math.min(x, fi.max); else fi.max = Math.max(x, fi.min);
+    majCurseur(fi); return appliquerFiltres();
+  }
   if (ev.target.dataset.rayon) {
     const r = [...$('pop').querySelectorAll('[data-rayon]')].filter(x => x.checked).map(x => +x.dataset.rayon);
     if (depart) { depart.rayons = r; local.ecrire('depart', depart); majDepart(); }
@@ -2540,11 +2706,24 @@ $('pop').addEventListener('change', async ev => {
     fermerPop();
   }
 });
+$('pop').addEventListener('input', ev => {
+  const f = ev.target.dataset.borne && filtres.find(x => x.id === +ev.target.dataset.fi); if (!f) return;
+  const x = Number(ev.target.value);
+  if (ev.target.dataset.borne === 'min') f.min = Math.min(x, f.max); else f.max = Math.max(x, f.min);
+  majCurseur(f); appliquerFiltres();
+});
 $('pop').addEventListener('submit', ev => { ev.preventDefault(); if (ev.target.id === 'de-form') { const q = $('de-q').value.trim(); if (q.length >= 3) chercherAdresse(q); } });
 $('pop').addEventListener('click', ev => {
   const id = ev.target.closest('button') && ev.target.closest('button').id;
-  if (id === 'fi-tout' || id === 'fi-rien') { $('pop').querySelectorAll('input[data-fv]').forEach(x => { x.checked = id === 'fi-tout'; }); lireFiltre(); }
-  if (id === 'fi-retirer') { filtre = null; masquees.clear(); recalculer(); rendreFiltre($('pop').dataset.col); }
+  const bt = ev.target.closest('[data-fi-tout], [data-fi-rien], [data-fi-suppr]');
+  if (bt) {
+    const fid = +(bt.dataset.fiTout || bt.dataset.fiRien || bt.dataset.fiSuppr), f = filtres.find(x => x.id === fid);
+    if (bt.dataset.fiSuppr) filtres = filtres.filter(x => x.id !== fid);
+    else { $('pop').querySelectorAll(`input[data-fi="${fid}"][data-fv]`).forEach(x => { x.checked = !!bt.dataset.fiTout; }); f.garder = new Set(bt.dataset.fiTout ? [...$('pop').querySelectorAll(`input[data-fi="${fid}"][data-fv]`)].map(x => x.dataset.fv) : []); }
+    appliquerFiltres(); if (bt.dataset.fiSuppr) setTimeout(() => rendreFiltre(), 20);
+    return;
+  }
+  if (id === 'fi-retirer') { filtres = []; appliquerFiltres(); setTimeout(() => rendreFiltre(), 20); }
   if (id === 'fi-fermer' || id === 'de-fermer') fermerPop();
   if (id === 'de-retirer') { definirDepart(null); fermerPop(); }
   if (id === 'de-clic') { modeDepartClic = true; document.body.classList.add('mode-depart'); fermerPop(); toast('Cliquez sur la carte pour placer le point de départ.'); }
@@ -2737,8 +2916,8 @@ initGrist();
 
 // points d’accès pour les tests automatiques
 window.cartoProfs = { VERSION, rendreModele, lienMailto, lots, deviner, typeEtab, domaineAcademie, analyserColonne, distanceKm,
-  etat: () => ({ zr: marqueursZR.map(m => ({ uai: m._e.uai, cote: m._cote, lng: m.getLngLat().lng, lat: m.getLngLat().lat })), departements: departements ? Object.fromEntries([...departements].map(([c, d]) => [c, { nom: d.nom, bbox: d.bbox }])) : null, personnes, visibles, etabs, categories, introuvables, sansUai, selection: [...selection], reglages, geo, filtre, depart, devinees }),
-  destinataires, csvEtabs, ouvrirFiche, selectionnerZone };
+  etat: () => ({ zr: marqueursZR.map(m => ({ uai: m._e.uai, cote: m._cote, lng: m.getLngLat().lng, lat: m.getLngLat().lat })), departements: departements ? Object.fromEntries([...departements].map(([c, d]) => [c, { nom: d.nom, bbox: d.bbox }])) : null, personnes, visibles, etabs, categories, introuvables, sansUai, selection: [...selection], reglages, geo, filtres, depart, devinees }),
+  destinataires, csvEtabs, ouvrirFiche, selectionnerZone, fmtDuree, moisDepuis, dateDe };
 </script>
 </body>
 </html>

@@ -65,7 +65,10 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
 
 - Les **UAI** de la table, par paquets de 50, vers
   [data.education.gouv.fr](https://data.education.gouv.fr) (jeux « Adresse et géolocalisation des établissements
-  d’enseignement du premier et second degrés » et « Annuaire de l’éducation »).
+  d’enseignement du premier et second degrés » et « Annuaire de l’éducation ») ; pour les UAI absents (supérieur,
+  rectorat, CFA…), recherche plein texte dans l’annuaire de l’éducation puis sur
+  [data.enseignementsup-recherche.gouv.fr](https://data.enseignementsup-recherche.gouv.fr) (« Principaux établissements
+  d’enseignement supérieur », « Implantations des établissements d’enseignement supérieur publics »).
 - L’adresse tapée pour le **point de départ**, vers le service d’adresses de l’IGN (`data.geopf.fr`).
 - Les tuiles du fond de carte (OpenFreeMap).
 - **Jamais** les noms, mails ou autres colonnes. Les mails s’ouvrent dans la messagerie de l’usager·e : le widget
@@ -86,7 +89,9 @@ la table `Profs_maths_26_27` telle quelle (`Rne`, `Nom`, `Prenom`, `mail_ouvert`
 - **Bulles** : survol (commune, type, nombre) ; fiche avec modèle de ligne `{Nom} {Prenom} — {Grade}`, colonnes à
   cocher et ordonner, aperçu en direct ; liens mail, site, itinéraire OpenStreetMap, « voir la ligne dans Grist ».
 - **Fond d’établissements** d’une académie, filtrable (écoles, CLG, LYC, EREA, autres ; public, privé).
-- **Recherche** (personne, établissement, UAI, commune), **filtre** par colonne, **point de départ** avec cercles
+- **Recherche** (personne, établissement, UAI, commune) ; **filtres à plusieurs critères** cumulés : cases (texte),
+  curseur à deux poignées (nombres, durée jusqu’à aujourd’hui pour les dates : ancienneté, âge) ; champs calculés
+  `{Date_naissance|age}`, `{Debut_affect|duree}` dans les bulles ; **point de départ** avec cercles
   10 / 20 / 50 km et distances.
 - **Sélection** (fiches, rectangle sur la carte, liste) et **mails** : sélection, personnes affichées, établissements,
   personnes + établissement en copie ; Cci par défaut ; lots de 40 adresses ; copie des adresses.
